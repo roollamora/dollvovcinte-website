@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Glitch Lab — DVCT</title>
+  <title>Glitch Mix Lab — DVCT</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Special+Elite&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
   <style>
     @font-face {
       font-family: Cyber;
@@ -18,42 +18,57 @@
       color-scheme: light dark;
       --shadow: hsl(10 100% 60%);
       --accent: hsl(183 38% 57%);
+      --stage-text: light-dark(#1a1a1f, #f5f5f5);
       --corner: 12px;
       --border: 2px;
       --clip-btn: polygon(
-        0 0,
-        100% 0,
+        0 0, 100% 0,
         100% calc(100% - var(--corner)),
         calc(100% - var(--corner)) 100%,
         0% 100%
       );
       --flicker: linear(
-        0 0%,
-        0.1864 6.17%,
-        0.0001 14.41%,
-        0.5244 20.97%,
-        0.3927 37.91%,
-        0.8115 60.62%,
-        0.9416 61.92%,
-        0.9928 67.98%,
-        0.5032 70.42%,
-        0.9077 96.96%,
-        0.6736 98.74%,
-        1 100%
+        0 0%, 0.1864 6.17%, 0.0001 14.41%, 0.5244 20.97%,
+        0.3927 37.91%, 0.8115 60.62%, 0.9416 61.92%,
+        0.9928 67.98%, 0.5032 70.42%, 0.9077 96.96%,
+        0.6736 98.74%, 1 100%
       );
       --lab-bg: light-dark(#f4f4f6, #0d0d0f);
       --lab-surface: light-dark(#fff, #16161a);
       --lab-border: light-dark(#d8d8de, #2a2a32);
       --lab-text: light-dark(#1a1a1f, #ececef);
       --lab-muted: light-dark(#5c5c68, #9898a4);
-      --lab-accent: hsl(183 38% 42%);
       --preview-bg: light-dark(#e8e8ec, #08080a);
-      --shimmy-distance: 5;
-      --glitch-duration: 2s;
-      --glitch-iteration: infinite;
-      --clip-intensity: 1;
+      --stage-opacity: 1;
+      --global-blur: 0px;
       --modal-blur: 2px;
       --modal-saturate: 140%;
+      --btn-blur: 6px;
+      --btn-saturate: 180%;
+      --kf-duration: 2s;
+      --kf-delay: 0s;
+      --kf-iteration: infinite;
+      --btn-duration: 2s;
+      --btn-delay: 0s;
+      --btn-iteration: infinite;
+      --modal-duration: 2s;
+      --modal-delay: 0s;
+      --modal-iteration: infinite;
+      --bg-flicker-duration: 0.25s;
+      --bg-flicker-delay: 0s;
+      --bg-flicker-iteration: 1;
+      --edge-duration: 0.625s;
+      --edge-delay: 0s;
+      --edge-iteration: 1;
+      --kf-shimmy: 5;
+      --btn-shimmy: 5;
+      --modal-shimmy: 2;
+      --kf-opacity: 1;
+      --btn-opacity: 1;
+      --modal-opacity: 1;
+      --bg-flicker-opacity: 0.65;
+      --edge-opacity: 1;
+      --backdrop-opacity: 0.4;
     }
 
     [data-theme="light"] { color-scheme: light only; }
@@ -104,6 +119,7 @@
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
+      align-items: center;
     }
 
     .btn-ghost {
@@ -121,12 +137,12 @@
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(280px, 360px) 1fr;
+      grid-template-columns: minmax(300px, 380px) 1fr;
       gap: 0;
       min-height: calc(100vh - 72px);
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 960px) {
       .layout { grid-template-columns: 1fr; }
     }
 
@@ -141,20 +157,32 @@
       padding: 1.5rem;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 1rem;
       overflow-y: auto;
+      align-items: center;
+      justify-content: center;
     }
 
     .section {
-      margin-bottom: 1.25rem;
-      padding: 1rem;
+      margin-bottom: 1rem;
+      padding: 0.85rem 1rem;
       border: 1px solid var(--lab-border);
       border-radius: 10px;
       background: var(--lab-surface);
     }
 
+    .section.is-off { opacity: 0.72; }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.65rem;
+    }
+
     .section h2 {
-      margin: 0 0 0.75rem;
+      margin: 0;
       font-size: 0.75rem;
       font-weight: 700;
       letter-spacing: 0.1em;
@@ -170,12 +198,15 @@
       font-size: 0.6875rem;
     }
 
+    .section-body { display: none; }
+    .section.is-on .section-body { display: block; }
+
     .control-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem;
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.55rem;
       font-size: 0.8125rem;
     }
 
@@ -191,9 +222,11 @@
       text-align: right;
     }
 
-    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    input[type="range"] { width: 100%; accent-color: var(--accent); margin-bottom: 0.35rem; }
 
     input[type="text"],
+    input[type="number"],
+    input[type="color"],
     select {
       width: 100%;
       padding: 0.45rem 0.6rem;
@@ -205,6 +238,22 @@
       font-size: 0.8125rem;
     }
 
+    input[type="color"] {
+      height: 2rem;
+      padding: 0.15rem;
+      cursor: pointer;
+    }
+
+    .color-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.55rem;
+    }
+
+    .color-row label { font-size: 0.8125rem; }
+
     .toggle {
       position: relative;
       width: 42px;
@@ -212,11 +261,7 @@
       flex-shrink: 0;
     }
 
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
 
     .toggle span {
       position: absolute;
@@ -246,7 +291,7 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 0.35rem;
-      margin-top: 0.5rem;
+      margin-top: 0.35rem;
     }
 
     .clip-grid label {
@@ -273,9 +318,23 @@
       cursor: pointer;
     }
 
+    .letter-grid select { width: auto; min-width: 3rem; padding: 0.2rem; font-size: 0.6875rem; }
+
+    .preview-label {
+      font-size: 0.6875rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--lab-muted);
+      margin-bottom: 0.5rem;
+      width: 100%;
+      max-width: 560px;
+    }
+
     .preview-stage {
       position: relative;
-      min-height: 220px;
+      width: 100%;
+      max-width: 560px;
+      min-height: 320px;
       border-radius: 12px;
       border: 1px solid var(--lab-border);
       background: var(--preview-bg);
@@ -289,35 +348,101 @@
       content: "";
       position: absolute;
       inset: 0;
-      background: linear-gradient(
-        90deg,
-        color-mix(in srgb, var(--lab-muted) 15%, transparent) 1px,
-        transparent 1px 24px
-      ) 0 0 / 24px 24px,
-      linear-gradient(
-        color-mix(in srgb, var(--lab-muted) 15%, transparent) 1px,
-        transparent 1px 24px
-      ) 0 0 / 24px 24px;
-      opacity: 0.5;
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--lab-muted) 12%, transparent) 1px, transparent 1px 24px) 0 0 / 24px 24px,
+        linear-gradient(color-mix(in srgb, var(--lab-muted) 12%, transparent) 1px, transparent 1px 24px) 0 0 / 24px 24px;
+      opacity: 0.45;
       pointer-events: none;
     }
 
-    .preview-label {
-      font-size: 0.6875rem;
-      letter-spacing: 0.12em;
+    /* —— Unified Mix Card —— */
+    .mix-card {
+      --corner: 12px;
+      --border: 2px;
+      --clip: polygon(
+        0 0, 100% 0,
+        100% calc(100% - var(--corner)),
+        calc(100% - var(--corner)) 100%,
+        0% 100%
+      );
+      position: relative;
+      width: min(100%, 360px);
+      font-family: Cyber, sans-serif;
+      color: var(--accent);
+      opacity: var(--stage-opacity);
+      filter: blur(var(--global-blur));
+      transition: color 0.15s;
+    }
+
+    .mix-card:focus-within { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 4px; }
+
+    .mix-edge-rail {
+      position: absolute;
+      top: 1px;
+      bottom: 1px;
+      right: 100%;
+      width: 1rem;
+      border: var(--border) solid var(--accent);
+      background: var(--accent);
+      mask: linear-gradient(#fff, hsl(0 0% 100% / 0.6) 15% 95%, #fff);
+      opacity: var(--edge-opacity);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .mix-card.is-edge-flicker .mix-edge-rail {
+      animation: edge-flicker var(--edge-duration) var(--flicker) var(--edge-iteration);
+      animation-delay: var(--edge-delay);
+    }
+
+    .flicker-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      clip-path: var(--clip);
+      background: light-dark(
+        hsl(0 0% 100% / var(--backdrop-opacity)),
+        hsl(0 0% 0% / var(--backdrop-opacity))
+      );
+    }
+
+    .flicker-backdrop.is-bg-flicker {
+      animation: bg-flicker var(--bg-flicker-duration) var(--flicker) var(--bg-flicker-iteration);
+      animation-delay: var(--bg-flicker-delay);
+    }
+
+    .mix-body {
+      position: relative;
+      backdrop-filter: saturate(var(--modal-saturate)) blur(var(--modal-blur));
+      clip-path: inset(0 -100% 0 0);
+      border: var(--border) solid var(--accent);
+      padding: 1.25rem 1rem 1rem;
+      z-index: 1;
+    }
+
+    .mix-kicker {
+      font-size: 0.5625rem;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--lab-muted);
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .glitch-host {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      text-align: center;
     }
 
     .preview-target {
       position: relative;
       font-family: "Special Elite", "Courier New", monospace;
-      font-size: clamp(1.5rem, 5vw, 2.75rem);
+      font-size: clamp(1.35rem, 4.5vw, 2.25rem);
       letter-spacing: 0.1em;
-      color: light-dark(#1a1a1f, #f5f5f5);
+      color: var(--stage-text);
       text-transform: lowercase;
-      z-index: 1;
+      z-index: 2;
     }
 
     .preview-target.cyber {
@@ -327,19 +452,10 @@
       color: var(--accent);
     }
 
-    /* —— Glitch layer (from reference CSS) —— */
-    .letters {
-      display: flex;
-    }
-
-    .letters span[data-flip-x="1"] { scale: -1 1; }
-    .letters span[data-flip-y="1"] { scale: 1 -1; }
-    .letters span[data-flip-xy="1"] { scale: -1 -1; }
-
-    .glitch-host {
-      --shimmy-distance: 5;
-      position: relative;
-      display: inline-block;
+    .preview-target.is-kf-glitch {
+      opacity: var(--kf-opacity);
+      animation: glitch-kf var(--kf-duration) var(--kf-iteration);
+      animation-delay: var(--kf-delay);
     }
 
     .glitch-host .glitch-layer,
@@ -351,10 +467,6 @@
       --clip-five: polygon(0 0, 100% 0, 100% 0, 95% 0, 95% 0, 85% 0, 85% 0, 8% 0, 0 0);
       --clip-six: polygon(0 40%, 100% 40%, 100% 85%, 95% 85%, 95% 85%, 85% 85%, 85% 85%, 8% 85%, 0 70%);
       --clip-seven: polygon(0 63%, 100% 63%, 100% 80%, 95% 80%, 95% 80%, 85% 80%, 85% 80%, 8% 80%, 0 70%);
-    }
-
-    .preview-target.is-glitch-anim {
-      animation: glitch var(--glitch-duration) var(--glitch-iteration);
     }
 
     .glitch-host .glitch-layer {
@@ -369,20 +481,24 @@
       font: inherit;
       letter-spacing: inherit;
       text-transform: inherit;
+      opacity: var(--btn-opacity);
+      z-index: 4;
     }
 
     .glitch-host.btn-glitch-enabled.force-overlay .glitch-layer,
     .glitch-host.btn-glitch-enabled:hover .glitch-layer,
-    .glitch-host.btn-glitch-enabled:focus-within .glitch-layer {
+    .glitch-host.btn-glitch-enabled:focus-within .glitch-layer,
+    .mix-card:hover .glitch-host.btn-glitch-enabled .glitch-layer,
+    .mix-card:focus-within .glitch-host.btn-glitch-enabled .glitch-layer {
       display: flex;
-      animation: glitch var(--glitch-duration) var(--glitch-iteration);
+      animation: glitch-btn var(--btn-duration) var(--btn-iteration);
+      animation-delay: var(--btn-delay);
     }
 
     .modal__glitch {
-      --shimmy-distance: 2;
       position: absolute;
       inset: 0;
-      padding: 1rem;
+      padding: 1.25rem 1rem;
       color: var(--shadow);
       z-index: 0;
       pointer-events: none;
@@ -390,215 +506,113 @@
       letter-spacing: inherit;
       text-transform: inherit;
       display: none;
+      opacity: var(--modal-opacity);
+      text-align: center;
+      align-content: center;
     }
 
-    .modal-preview.is-modal-glitch .modal__glitch {
+    .mix-card.is-modal-glitch .modal__glitch {
       display: block;
-      animation: glitch var(--glitch-duration) var(--glitch-iteration);
+      animation: glitch-modal var(--modal-duration) var(--modal-iteration);
+      animation-delay: var(--modal-delay);
     }
 
-    @keyframes glitch {
-      0% { clip-path: var(--clip-one); }
-      2%, 8% {
-        clip-path: var(--clip-two);
-        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
-      }
-      6% {
-        clip-path: var(--clip-two);
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      9% {
-        clip-path: var(--clip-two);
-        transform: translate(0, 0);
-      }
-      10% {
-        clip-path: var(--clip-three);
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      13% {
-        clip-path: var(--clip-three);
-        transform: translate(0, 0);
-      }
-      14%, 21% {
-        clip-path: var(--clip-four);
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      25% {
-        clip-path: var(--clip-five);
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      30% {
-        clip-path: var(--clip-five);
-        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
-      }
-      35%, 45% {
-        clip-path: var(--clip-six);
-        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
-      }
-      40% {
-        clip-path: var(--clip-six);
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      50% {
-        clip-path: var(--clip-six);
-        transform: translate(0, 0);
-      }
-      55% {
-        clip-path: var(--clip-seven);
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      60% {
-        clip-path: var(--clip-seven);
-        transform: translate(0, 0);
-      }
-      31%, 61%, 100% { clip-path: var(--clip-four); }
-    }
-
-    @keyframes flicker {
-      0% { opacity: 0; }
-      100% { opacity: 1; }
-    }
-
-    @keyframes bg-flicker {
-      0% { background: light-dark(hsl(0 0% 100% / 0.65), hsl(0 0% 0% / 0.65)); }
-      100% { background: var(--accent); }
-    }
-
-    /* Cyber button demo */
-    .cyber-btn {
-      --corner: 12px;
-      --border: 1px;
-      --clip: var(--clip-btn);
-      font-family: Cyber, sans-serif;
-      width: 160px;
-      text-align: left;
-      text-transform: uppercase;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem;
-      border: 0;
-      background: transparent;
-      position: relative;
-      color: var(--accent);
-      cursor: pointer;
-      font-size: 0.875rem;
-    }
-
-    .cyber-btn .backdrop {
+    .btn-backdrop {
       position: absolute;
       z-index: -1;
-      inset: 0;
-      background: light-dark(hsl(0 0% 100% / 0.4), hsl(0 0% 0% / 0.4));
-      clip-path: var(--clip);
+      inset: -0.35rem -0.5rem;
+      background: light-dark(
+        hsl(0 0% 100% / var(--backdrop-opacity)),
+        hsl(0 0% 0% / var(--backdrop-opacity))
+      );
+      clip-path: var(--clip-btn);
       pointer-events: none;
-      backdrop-filter: saturate(180%) blur(6px);
+      backdrop-filter: saturate(var(--btn-saturate)) blur(var(--btn-blur));
       transition: background 0.15s;
     }
 
-    .cyber-btn:hover .backdrop,
-    .cyber-btn:focus-visible .backdrop {
-      background: var(--accent);
+    .glitch-host.btn-glitch-enabled:hover .btn-backdrop,
+    .glitch-host.btn-glitch-enabled:focus-within .btn-backdrop,
+    .glitch-host.btn-glitch-enabled.force-overlay .btn-backdrop,
+    .mix-card:hover .glitch-host.btn-glitch-enabled .btn-backdrop {
+      background: color-mix(in srgb, var(--accent) 55%, transparent);
     }
 
-    .cyber-btn:hover,
-    .cyber-btn:focus-visible {
-      color: canvas;
+    .letters { display: flex; justify-content: center; flex-wrap: wrap; }
+    .letters span[data-flip-x="1"] { scale: -1 1; }
+    .letters span[data-flip-y="1"] { scale: 1 -1; }
+    .letters span[data-flip-xy="1"] { scale: -1 -1; }
+
+    @keyframes glitch-kf {
+      0% { clip-path: var(--clip-one); }
+      2%, 8% { clip-path: var(--clip-two); transform: translate(calc(var(--kf-shimmy) * -1%), 0); }
+      6% { clip-path: var(--clip-two); transform: translate(calc(var(--kf-shimmy) * 1%), 0); }
+      9% { clip-path: var(--clip-two); transform: translate(0, 0); }
+      10% { clip-path: var(--clip-three); transform: translate(calc(var(--kf-shimmy) * 1%), 0); }
+      13% { clip-path: var(--clip-three); transform: translate(0, 0); }
+      14%, 21% { clip-path: var(--clip-four); transform: translate(calc(var(--kf-shimmy) * 1%), 0); }
+      25% { clip-path: var(--clip-five); transform: translate(calc(var(--kf-shimmy) * 1%), 0); }
+      30% { clip-path: var(--clip-five); transform: translate(calc(var(--kf-shimmy) * -1%), 0); }
+      35%, 45% { clip-path: var(--clip-six); transform: translate(calc(var(--kf-shimmy) * -1%), 0); }
+      40% { clip-path: var(--clip-six); transform: translate(calc(var(--kf-shimmy) * 1%), 0); }
+      50% { clip-path: var(--clip-six); transform: translate(0, 0); }
+      55% { clip-path: var(--clip-seven); transform: translate(calc(var(--kf-shimmy) * 1%), 0); }
+      60% { clip-path: var(--clip-seven); transform: translate(0, 0); }
+      31%, 61%, 100% { clip-path: var(--clip-four); }
     }
 
-    .cyber-btn kbd {
-      color: canvas;
-      font-weight: bold;
-      width: 20px;
-      aspect-ratio: 1;
-      font-size: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      display: inline-grid;
-      place-items: center;
+    @keyframes glitch-btn {
+      0% { clip-path: var(--clip-one); }
+      2%, 8% { clip-path: var(--clip-two); transform: translate(calc(var(--btn-shimmy) * -1%), 0); }
+      6% { clip-path: var(--clip-two); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      9% { clip-path: var(--clip-two); transform: translate(0, 0); }
+      10% { clip-path: var(--clip-three); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      13% { clip-path: var(--clip-three); transform: translate(0, 0); }
+      14%, 21% { clip-path: var(--clip-four); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      25% { clip-path: var(--clip-five); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      30% { clip-path: var(--clip-five); transform: translate(calc(var(--btn-shimmy) * -1%), 0); }
+      35%, 45% { clip-path: var(--clip-six); transform: translate(calc(var(--btn-shimmy) * -1%), 0); }
+      40% { clip-path: var(--clip-six); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      50% { clip-path: var(--clip-six); transform: translate(0, 0); }
+      55% { clip-path: var(--clip-seven); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      60% { clip-path: var(--clip-seven); transform: translate(0, 0); }
+      31%, 61%, 100% { clip-path: var(--clip-four); }
     }
 
-    .cyber-btn .glitch-layer {
-      gap: 0.5rem;
-      padding: 0.5rem;
+    @keyframes glitch-modal {
+      0% { clip-path: var(--clip-one); }
+      2%, 8% { clip-path: var(--clip-two); transform: translate(calc(var(--modal-shimmy) * -1%), 0); }
+      6% { clip-path: var(--clip-two); transform: translate(calc(var(--modal-shimmy) * 1%), 0); }
+      9% { clip-path: var(--clip-two); transform: translate(0, 0); }
+      10% { clip-path: var(--clip-three); transform: translate(calc(var(--modal-shimmy) * 1%), 0); }
+      13% { clip-path: var(--clip-three); transform: translate(0, 0); }
+      14%, 21% { clip-path: var(--clip-four); transform: translate(calc(var(--modal-shimmy) * 1%), 0); }
+      25% { clip-path: var(--clip-five); transform: translate(calc(var(--modal-shimmy) * 1%), 0); }
+      30% { clip-path: var(--clip-five); transform: translate(calc(var(--modal-shimmy) * -1%), 0); }
+      35%, 45% { clip-path: var(--clip-six); transform: translate(calc(var(--modal-shimmy) * -1%), 0); }
+      40% { clip-path: var(--clip-six); transform: translate(calc(var(--modal-shimmy) * 1%), 0); }
+      50% { clip-path: var(--clip-six); transform: translate(0, 0); }
+      55% { clip-path: var(--clip-seven); transform: translate(calc(var(--modal-shimmy) * 1%), 0); }
+      60% { clip-path: var(--clip-seven); transform: translate(0, 0); }
+      31%, 61%, 100% { clip-path: var(--clip-four); }
     }
 
-    .cyber-btn.force-overlay .glitch-layer { color: canvas; }
-
-    .demo-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1.5rem;
-      align-items: center;
-      justify-content: center;
+    @keyframes edge-flicker {
+      0% { opacity: 0; }
+      100% { opacity: var(--edge-opacity); }
     }
 
-    /* Modal preview mini */
-    .modal-preview {
-      --corner: 12px;
-      --border: 2px;
-      --clip: polygon(
-        0 0, 100% 0,
-        100% calc(100% - var(--corner)),
-        calc(100% - var(--corner)) 100%,
-        0% 100%
-      );
-      position: relative;
-      width: min(100%, 320px);
-      font-family: Cyber, sans-serif;
-      color: var(--accent);
-      padding: 0;
-    }
-
-    .modal-preview .modal__body {
-      position: relative;
-      backdrop-filter: saturate(var(--modal-saturate)) blur(var(--modal-blur));
-      clip-path: inset(0 -100% 0 0);
-      border: var(--border) solid var(--accent);
-      padding: 1rem;
-      z-index: 1;
-    }
-
-    .modal-preview h3 {
-      margin: 0 0 0.5rem;
-      font-size: 1rem;
-      text-transform: uppercase;
-    }
-
-    .modal-preview::before {
-      content: "";
-      position: absolute;
-      top: 1px;
-      bottom: 1px;
-      right: 100%;
-      width: 1rem;
-      border: var(--border) solid var(--accent);
-      background: var(--accent);
-      mask: linear-gradient(#fff, hsl(0 0% 100% / 0.6) 15% 95%, #fff);
-      opacity: 1;
-    }
-
-    .modal-preview.is-edge-flicker::before {
-      animation: flicker 0.625s var(--flicker) none;
-    }
-
-    .flicker-backdrop {
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      clip-path: var(--clip);
-      background: light-dark(hsl(0 0% 100% / 0.35), hsl(0 0% 0% / 0.35));
-    }
-
-    .flicker-backdrop.is-bg-flicker {
-      animation: bg-flicker 0.25s var(--flicker);
+    @keyframes bg-flicker {
+      0% { background: light-dark(hsl(0 0% 100% / var(--bg-flicker-opacity)), hsl(0 0% 0% / var(--bg-flicker-opacity))); }
+      100% { background: var(--accent); }
     }
 
     .mix-badge {
       display: inline-flex;
       flex-wrap: wrap;
       gap: 0.35rem;
-      margin-top: 0.75rem;
+      max-width: 560px;
+      width: 100%;
     }
 
     .mix-badge span {
@@ -613,7 +627,7 @@
     .hint {
       font-size: 0.6875rem;
       color: var(--lab-muted);
-      margin-top: 0.5rem;
+      margin-top: 0.35rem;
     }
 
     .back-link {
@@ -624,12 +638,22 @@
 
     .back-link:hover { color: var(--accent); }
 
+    .iter-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.35rem;
+    }
+
+    .iter-row input[type="number"] { width: 4rem; }
+
     @media (prefers-reduced-motion: reduce) {
-      .preview-target.is-glitch-anim,
+      .preview-target.is-kf-glitch,
       .glitch-host .glitch-layer,
       .modal__glitch,
       .flicker-backdrop.is-bg-flicker,
-      .modal-preview.is-edge-flicker::before {
+      .mix-card.is-edge-flicker .mix-edge-rail {
         animation: none !important;
       }
     }
@@ -638,166 +662,192 @@
 <body>
   <header class="lab-header">
     <div>
-      <h1>Glitch Lab</h1>
-      <p>Mix &amp; preview all glitch effects from the Cyber UI system</p>
+      <h1>Glitch Mix Lab</h1>
+      <p>One stage — layer every effect, tune every timing</p>
     </div>
     <div class="header-actions">
       <a class="back-link" href="/">← Home</a>
       <button type="button" class="btn-ghost" id="themeToggle" aria-label="Toggle theme">Theme: Auto</button>
-      <button type="button" class="btn-ghost" id="replayBtn">Replay animations</button>
+      <button type="button" class="btn-ghost" id="replayBtn">Replay all</button>
     </div>
   </header>
 
   <div class="layout">
-    <aside class="controls" aria-label="Effect controls">
-      <div class="section">
-        <h2>Preview text</h2>
-        <div class="control-row">
-          <label for="previewText">Sample copy</label>
+    <aside class="controls" aria-label="Mix controls">
+      <div class="section is-on">
+        <div class="section-head"><h2>Stage content</h2></div>
+        <div class="section-body">
+          <div class="control-row"><label for="previewText">Sample copy</label></div>
+          <input type="text" id="previewText" value="[coming soon]" maxlength="32">
+          <div class="control-row" style="margin-top:0.55rem;"><label for="fontStyle">Font style</label></div>
+          <select id="fontStyle">
+            <option value="mono">Special Elite — [coming soon]</option>
+            <option value="cyber">Cyber — UPGRADE</option>
+          </select>
         </div>
-        <input type="text" id="previewText" value="[coming soon]" maxlength="32">
-        <div class="control-row" style="margin-top: 0.65rem;">
-          <label for="fontStyle">Font style</label>
-        </div>
-        <select id="fontStyle">
-          <option value="mono">Special Elite — [coming soon]</option>
-          <option value="cyber">Cyber — UPGRADE</option>
-        </select>
       </div>
 
-      <div class="section">
-        <h2>1 · Glitch keyframes</h2>
-        <div class="control-row">
-          <label for="toggleGlitchAnim">Clip-path + shimmy animation</label>
-          <label class="toggle"><input type="checkbox" id="toggleGlitchAnim"><span></span></label>
+      <div class="section is-on">
+        <div class="section-head"><h2>Global appearance</h2></div>
+        <div class="section-body">
+          <div class="color-row"><label for="accentColor">Accent</label><input type="color" id="accentColor" value="#6bb8b8"></div>
+          <div class="color-row"><label for="shadowColor">Shadow / glitch tint</label><input type="color" id="shadowColor" value="#ff6633"></div>
+          <div class="color-row"><label for="textColor">Stage text</label><input type="color" id="textColor" value="#f5f5f5"></div>
+          <div class="color-row"><label for="stageBg">Stage background</label><input type="color" id="stageBg" value="#08080a"></div>
+          <div class="control-row"><label for="stageOpacity">Stage opacity <output id="stageOpacityOut">100</output>%</label></div>
+          <input type="range" id="stageOpacity" min="10" max="100" step="1" value="100">
+          <div class="control-row"><label for="backdropOpacity">Backdrop transparency <output id="backdropOpacityOut">40</output>%</label></div>
+          <input type="range" id="backdropOpacity" min="0" max="100" step="1" value="40">
+          <div class="control-row"><label for="globalBlur">Global blur <output id="globalBlurOut">0</output>px</label></div>
+          <input type="range" id="globalBlur" min="0" max="8" step="1" value="0">
         </div>
-        <div class="control-row">
-          <label for="duration">Duration <output id="durationOut">2.0</output>s</label>
-        </div>
-        <input type="range" id="duration" min="0.3" max="6" step="0.1" value="2">
-        <div class="control-row">
-          <label for="shimmy">Shimmy distance <output id="shimmyOut">5</output>%</label>
-        </div>
-        <input type="range" id="shimmy" min="0" max="20" step="1" value="5">
-        <div class="control-row">
-          <label for="toggleInfinite">Loop infinitely</label>
-          <label class="toggle"><input type="checkbox" id="toggleInfinite" checked><span></span></label>
-        </div>
-        <div class="control-row">
-          <label for="clipIntensity">Clip intensity <output id="clipIntensityOut">100</output>%</label>
-        </div>
-        <input type="range" id="clipIntensity" min="0" max="200" step="5" value="100">
-        <p class="hint">Active clip phases:</p>
-        <div class="clip-grid" id="clipToggles"></div>
       </div>
 
-      <div class="section">
-        <h2>2 · Button overlay</h2>
-        <div class="control-row">
-          <label for="toggleBtnGlitch">Hover/focus glitch overlay</label>
-          <label class="toggle"><input type="checkbox" id="toggleBtnGlitch"><span></span></label>
+      <div class="section" id="secKf" data-effect="kf">
+        <div class="section-head">
+          <h2>Keyframes glitch</h2>
+          <label class="toggle" title="Add to mix"><input type="checkbox" id="toggleKf"><span></span></label>
         </div>
-        <div class="control-row">
-          <label for="toggleBtnForce">Force overlay visible</label>
-          <label class="toggle"><input type="checkbox" id="toggleBtnForce"><span></span></label>
+        <div class="section-body">
+          <div class="control-row"><label for="kfDuration">Duration <output id="kfDurationOut">2.0</output>s</label></div>
+          <input type="range" id="kfDuration" min="0.2" max="8" step="0.1" value="2">
+          <div class="control-row"><label for="kfDelay">Delay <output id="kfDelayOut">0.0</output>s</label></div>
+          <input type="range" id="kfDelay" min="0" max="4" step="0.05" value="0">
+          <div class="control-row"><label for="kfInfinite">Loop infinitely</label><label class="toggle"><input type="checkbox" id="kfInfinite" checked><span></span></label></div>
+          <div class="iter-row" id="kfIterRow" hidden><label for="kfIterCount">Iterations</label><input type="number" id="kfIterCount" min="1" max="99" value="3"></div>
+          <div class="control-row"><label for="kfShimmy">Shimmy <output id="kfShimmyOut">5</output>%</label></div>
+          <input type="range" id="kfShimmy" min="0" max="25" step="1" value="5">
+          <div class="control-row"><label for="kfOpacity">Opacity <output id="kfOpacityOut">100</output>%</label></div>
+          <input type="range" id="kfOpacity" min="10" max="100" step="1" value="100">
+          <div class="control-row"><label for="clipIntensity">Clip intensity <output id="clipIntensityOut">100</output>%</label></div>
+          <input type="range" id="clipIntensity" min="0" max="200" step="5" value="100">
+          <p class="hint">Active clip phases:</p>
+          <div class="clip-grid" id="clipToggles"></div>
         </div>
-        <div class="control-row">
-          <label for="btnShimmy">Button shimmy <output id="btnShimmyOut">5</output>%</label>
-        </div>
-        <input type="range" id="btnShimmy" min="0" max="20" step="1" value="5">
       </div>
 
-      <div class="section">
-        <h2>3 · Modal overlay</h2>
-        <div class="control-row">
-          <label for="toggleModalGlitch">Modal __glitch layer</label>
-          <label class="toggle"><input type="checkbox" id="toggleModalGlitch"><span></span></label>
+      <div class="section" id="secBtn" data-effect="btn">
+        <div class="section-head">
+          <h2>Button overlay glitch</h2>
+          <label class="toggle" title="Add to mix"><input type="checkbox" id="toggleBtn"><span></span></label>
         </div>
-        <div class="control-row">
-          <label for="modalShimmy">Modal shimmy <output id="modalShimmyOut">2</output>%</label>
+        <div class="section-body">
+          <div class="control-row"><label for="btnForce">Force overlay visible</label><label class="toggle"><input type="checkbox" id="btnForce"><span></span></label></div>
+          <div class="control-row"><label for="btnDuration">Duration <output id="btnDurationOut">2.0</output>s</label></div>
+          <input type="range" id="btnDuration" min="0.2" max="8" step="0.1" value="2">
+          <div class="control-row"><label for="btnDelay">Delay <output id="btnDelayOut">0.0</output>s</label></div>
+          <input type="range" id="btnDelay" min="0" max="4" step="0.05" value="0">
+          <div class="control-row"><label for="btnInfinite">Loop infinitely</label><label class="toggle"><input type="checkbox" id="btnInfinite" checked><span></span></label></div>
+          <div class="iter-row" id="btnIterRow" hidden><label for="btnIterCount">Iterations</label><input type="number" id="btnIterCount" min="1" max="99" value="3"></div>
+          <div class="control-row"><label for="btnShimmy">Shimmy <output id="btnShimmyOut">5</output>%</label></div>
+          <input type="range" id="btnShimmy" min="0" max="25" step="1" value="5">
+          <div class="control-row"><label for="btnOpacity">Overlay opacity <output id="btnOpacityOut">100</output>%</label></div>
+          <input type="range" id="btnOpacity" min="10" max="100" step="1" value="100">
+          <div class="control-row"><label for="btnBlur">Backdrop blur <output id="btnBlurOut">6</output>px</label></div>
+          <input type="range" id="btnBlur" min="0" max="16" step="1" value="6">
+          <div class="control-row"><label for="btnSaturate">Backdrop saturate <output id="btnSaturateOut">180</output>%</label></div>
+          <input type="range" id="btnSaturate" min="50" max="250" step="5" value="180">
+          <p class="hint">Hover or focus the mix card — or force overlay</p>
         </div>
-        <input type="range" id="modalShimmy" min="0" max="20" step="1" value="2">
-        <div class="control-row">
-          <label for="modalBlur">Backdrop blur <output id="modalBlurOut">2</output>px</label>
-        </div>
-        <input type="range" id="modalBlur" min="0" max="12" step="1" value="2">
       </div>
 
-      <div class="section">
-        <h2>4 · Letters flip</h2>
-        <div class="control-row">
-          <label for="toggleLetters">Static scale distortion</label>
-          <label class="toggle"><input type="checkbox" id="toggleLetters"><span></span></label>
+      <div class="section" id="secModal" data-effect="modal">
+        <div class="section-head">
+          <h2>Modal glitch layer</h2>
+          <label class="toggle" title="Add to mix"><input type="checkbox" id="toggleModal"><span></span></label>
         </div>
-        <div class="control-row">
-          <label for="letterPattern">Pattern preset</label>
+        <div class="section-body">
+          <div class="control-row"><label for="modalDuration">Duration <output id="modalDurationOut">2.0</output>s</label></div>
+          <input type="range" id="modalDuration" min="0.2" max="8" step="0.1" value="2">
+          <div class="control-row"><label for="modalDelay">Delay <output id="modalDelayOut">0.0</output>s</label></div>
+          <input type="range" id="modalDelay" min="0" max="4" step="0.05" value="0">
+          <div class="control-row"><label for="modalInfinite">Loop infinitely</label><label class="toggle"><input type="checkbox" id="modalInfinite" checked><span></span></label></div>
+          <div class="iter-row" id="modalIterRow" hidden><label for="modalIterCount">Iterations</label><input type="number" id="modalIterCount" min="1" max="99" value="3"></div>
+          <div class="control-row"><label for="modalShimmy">Shimmy <output id="modalShimmyOut">2</output>%</label></div>
+          <input type="range" id="modalShimmy" min="0" max="25" step="1" value="2">
+          <div class="control-row"><label for="modalOpacity">Layer opacity <output id="modalOpacityOut">100</output>%</label></div>
+          <input type="range" id="modalOpacity" min="10" max="100" step="1" value="100">
+          <div class="control-row"><label for="modalBlur">Body backdrop blur <output id="modalBlurOut">2</output>px</label></div>
+          <input type="range" id="modalBlur" min="0" max="16" step="1" value="2">
+          <div class="control-row"><label for="modalSaturate">Body saturate <output id="modalSaturateOut">140</output>%</label></div>
+          <input type="range" id="modalSaturate" min="50" max="250" step="5" value="140">
         </div>
-        <select id="letterPattern">
-          <option value="default">Default (2,5 · 3,6,7)</option>
-          <option value="alternate-x">Alternate flip X</option>
-          <option value="alternate-y">Alternate flip Y</option>
-          <option value="all-xy">All flip XY</option>
-          <option value="custom">Custom per letter</option>
-        </select>
-        <div class="letter-grid" id="letterGrid" hidden></div>
       </div>
 
-      <div class="section">
-        <h2>5 · Flicker <span class="tag">(related, not core glitch)</span></h2>
-        <div class="control-row">
-          <label for="toggleBgFlicker">Background flicker (bg-flicker)</label>
-          <label class="toggle"><input type="checkbox" id="toggleBgFlicker"><span></span></label>
+      <div class="section" id="secLetters" data-effect="letters">
+        <div class="section-head">
+          <h2>Letters flip</h2>
+          <label class="toggle" title="Add to mix"><input type="checkbox" id="toggleLetters"><span></span></label>
         </div>
-        <div class="control-row">
-          <label for="toggleEdgeFlicker">Modal edge flicker</label>
-          <label class="toggle"><input type="checkbox" id="toggleEdgeFlicker"><span></span></label>
+        <div class="section-body">
+          <div class="control-row"><label for="letterPattern">Pattern preset</label></div>
+          <select id="letterPattern">
+            <option value="default">Default (2,5 · 3,6,7)</option>
+            <option value="alternate-x">Alternate flip X</option>
+            <option value="alternate-y">Alternate flip Y</option>
+            <option value="all-xy">All flip XY</option>
+            <option value="custom">Custom per letter</option>
+          </select>
+          <div class="letter-grid" id="letterGrid" hidden></div>
         </div>
-        <div class="control-row">
-          <label for="flickerSpeed">Flicker speed <output id="flickerSpeedOut">0.25</output>s</label>
+      </div>
+
+      <div class="section" id="secBg" data-effect="bg">
+        <div class="section-head">
+          <h2>Background flicker</h2>
+          <label class="toggle" title="Add to mix"><input type="checkbox" id="toggleBg"><span></span></label>
         </div>
-        <input type="range" id="flickerSpeed" min="0.1" max="1.5" step="0.05" value="0.25">
-        <button type="button" class="btn-ghost" id="fireFlicker" style="width:100%; margin-top:0.5rem;">Fire flicker once</button>
+        <div class="section-body">
+          <div class="control-row"><label for="bgDuration">Duration <output id="bgDurationOut">0.25</output>s</label></div>
+          <input type="range" id="bgDuration" min="0.05" max="2" step="0.05" value="0.25">
+          <div class="control-row"><label for="bgDelay">Delay <output id="bgDelayOut">0.0</output>s</label></div>
+          <input type="range" id="bgDelay" min="0" max="4" step="0.05" value="0">
+          <div class="control-row"><label for="bgInfinite">Loop infinitely</label><label class="toggle"><input type="checkbox" id="bgInfinite"><span></span></label></div>
+          <div class="iter-row" id="bgIterRow"><label for="bgIterCount">Iterations</label><input type="number" id="bgIterCount" min="1" max="99" value="1"></div>
+          <div class="control-row"><label for="bgFlickerOpacity">Peak opacity <output id="bgFlickerOpacityOut">65</output>%</label></div>
+          <input type="range" id="bgFlickerOpacity" min="5" max="100" step="1" value="65">
+          <button type="button" class="btn-ghost" id="fireBg" style="width:100%; margin-top:0.35rem;">Fire bg flicker</button>
+        </div>
+      </div>
+
+      <div class="section" id="secEdge" data-effect="edge">
+        <div class="section-head">
+          <h2>Edge flicker</h2>
+          <label class="toggle" title="Add to mix"><input type="checkbox" id="toggleEdge"><span></span></label>
+        </div>
+        <div class="section-body">
+          <div class="control-row"><label for="edgeDuration">Duration <output id="edgeDurationOut">0.63</output>s</label></div>
+          <input type="range" id="edgeDuration" min="0.05" max="2" step="0.05" value="0.625">
+          <div class="control-row"><label for="edgeDelay">Delay <output id="edgeDelayOut">0.0</output>s</label></div>
+          <input type="range" id="edgeDelay" min="0" max="4" step="0.05" value="0">
+          <div class="control-row"><label for="edgeInfinite">Loop infinitely</label><label class="toggle"><input type="checkbox" id="edgeInfinite"><span></span></label></div>
+          <div class="iter-row" id="edgeIterRow"><label for="edgeIterCount">Iterations</label><input type="number" id="edgeIterCount" min="1" max="99" value="1"></div>
+          <div class="control-row"><label for="edgeOpacity">Rail opacity <output id="edgeOpacityOut">100</output>%</label></div>
+          <input type="range" id="edgeOpacity" min="10" max="100" step="1" value="100">
+          <button type="button" class="btn-ghost" id="fireEdge" style="width:100%; margin-top:0.35rem;">Fire edge flicker</button>
+        </div>
       </div>
     </aside>
 
     <main class="preview-panel">
-      <div>
-        <div class="preview-label">Live mix preview</div>
-        <div class="preview-stage" id="mainStage">
-          <div class="glitch-host" id="mainHost">
-            <div class="preview-target" id="mainTarget">[coming soon]</div>
-            <div class="glitch-layer letters" id="mainGlitchLayer" aria-hidden="true"></div>
-          </div>
-        </div>
-        <div class="mix-badge" id="mixBadge"></div>
-      </div>
-
-      <div class="demo-row">
-        <div>
-          <div class="preview-label">Cyber button · aria-label Upgrade</div>
-          <button type="button" class="cyber-btn glitch-host" id="cyberBtn" aria-label="Upgrade">
-            <span class="backdrop"></span>
-            <kbd>U</kbd>
-            <span class="btn-label">Upgrade</span>
-            <span class="glitch-layer" id="btnGlitchLayer" aria-hidden="true">
-              <kbd>U</kbd><span class="btn-glitch-text letters">Upgrade</span>
-            </span>
-          </button>
-          <p class="hint">Hover or focus — or force overlay in controls</p>
-        </div>
-
-        <div>
-          <div class="preview-label">Modal · modal__glitch</div>
-          <div class="modal-preview" id="modalPreview">
-            <div class="flicker-backdrop" id="modalFlickerBg"></div>
-            <div class="modal__glitch letters" id="modalGlitchLayer" aria-hidden="true"></div>
-            <div class="modal__body">
-              <h3 class="letters" id="modalTitle"></h3>
-              <p style="font-size:0.75rem; opacity:0.7; margin:0;">Confirm system upgrade?</p>
+      <div class="preview-label">Mix Lab — all layers on one card</div>
+      <div class="preview-stage" id="mainStage">
+        <div class="mix-card" id="mixCard" tabindex="0">
+          <div class="mix-edge-rail" aria-hidden="true"></div>
+          <div class="flicker-backdrop" id="mixFlickerBg" aria-hidden="true"></div>
+          <div class="modal__glitch letters" id="modalGlitchLayer" aria-hidden="true"></div>
+          <div class="mix-body">
+            <div class="mix-kicker">DVCT · system</div>
+            <div class="glitch-host" id="mainHost">
+              <span class="btn-backdrop" aria-hidden="true"></span>
+              <div class="preview-target" id="mainTarget">[coming soon]</div>
+              <div class="glitch-layer letters" id="btnGlitchLayer" aria-hidden="true"></div>
             </div>
           </div>
         </div>
       </div>
+      <div class="mix-badge" id="mixBadge"></div>
+      <p class="hint" style="max-width:560px; text-align:center;">Hover the card for button overlay · Tab to focus · Toggle effects in the sidebar</p>
     </main>
   </div>
 
@@ -815,82 +865,139 @@
     };
 
     const CLIP_KEYS = ['one','two','three','four','five','six','seven'];
-    const CLIP_PHASE_MAP = {
-      one: [0],
-      two: [2, 6, 8, 9],
-      three: [10, 13],
-      four: [14, 21, 31, 61, 100],
-      five: [25, 30],
-      six: [35, 40, 45, 50],
-      seven: [55, 60],
-    };
 
     const state = {
       text: '[coming soon]',
       fontStyle: 'mono',
-      glitchAnim: false,
-      duration: 2,
-      shimmy: 5,
-      infinite: true,
-      clipIntensity: 100,
-      activeClips: Object.fromEntries(CLIP_KEYS.map(k => [k, true])),
-      btnGlitch: false,
-      btnForce: false,
-      btnShimmy: 5,
-      modalGlitch: false,
-      modalShimmy: 2,
-      modalBlur: 2,
-      letters: false,
-      letterPattern: 'default',
-      letterCustom: [],
-      bgFlicker: false,
-      edgeFlicker: false,
-      flickerSpeed: 0.25,
+      accent: '#6bb8b8',
+      shadow: '#ff6633',
+      stageText: '#f5f5f5',
+      stageBg: '#08080a',
+      stageOpacity: 100,
+      backdropOpacity: 40,
+      globalBlur: 0,
+      kf: false, kfDuration: 2, kfDelay: 0, kfInfinite: true, kfIter: 3, kfShimmy: 5, kfOpacity: 100,
+      clipIntensity: 100, activeClips: Object.fromEntries(CLIP_KEYS.map(k => [k, true])),
+      btn: false, btnForce: false, btnDuration: 2, btnDelay: 0, btnInfinite: true, btnIter: 3,
+      btnShimmy: 5, btnOpacity: 100, btnBlur: 6, btnSaturate: 180,
+      modal: false, modalDuration: 2, modalDelay: 0, modalInfinite: true, modalIter: 3,
+      modalShimmy: 2, modalOpacity: 100, modalBlur: 2, modalSaturate: 140,
+      letters: false, letterPattern: 'default', letterCustom: [],
+      bg: false, bgDuration: 0.25, bgDelay: 0, bgInfinite: false, bgIter: 1, bgFlickerOpacity: 65,
+      edge: false, edgeDuration: 0.625, edgeDelay: 0, edgeInfinite: false, edgeIter: 1, edgeOpacity: 100,
     };
 
     const els = {
       previewText: document.getElementById('previewText'),
       fontStyle: document.getElementById('fontStyle'),
-      toggleGlitchAnim: document.getElementById('toggleGlitchAnim'),
-      duration: document.getElementById('duration'),
-      durationOut: document.getElementById('durationOut'),
-      shimmy: document.getElementById('shimmy'),
-      shimmyOut: document.getElementById('shimmyOut'),
-      toggleInfinite: document.getElementById('toggleInfinite'),
+      accentColor: document.getElementById('accentColor'),
+      shadowColor: document.getElementById('shadowColor'),
+      textColor: document.getElementById('textColor'),
+      stageBg: document.getElementById('stageBg'),
+      stageOpacity: document.getElementById('stageOpacity'),
+      stageOpacityOut: document.getElementById('stageOpacityOut'),
+      backdropOpacity: document.getElementById('backdropOpacity'),
+      backdropOpacityOut: document.getElementById('backdropOpacityOut'),
+      globalBlur: document.getElementById('globalBlur'),
+      globalBlurOut: document.getElementById('globalBlurOut'),
+      toggleKf: document.getElementById('toggleKf'),
+      kfDuration: document.getElementById('kfDuration'),
+      kfDurationOut: document.getElementById('kfDurationOut'),
+      kfDelay: document.getElementById('kfDelay'),
+      kfDelayOut: document.getElementById('kfDelayOut'),
+      kfInfinite: document.getElementById('kfInfinite'),
+      kfIterRow: document.getElementById('kfIterRow'),
+      kfIterCount: document.getElementById('kfIterCount'),
+      kfShimmy: document.getElementById('kfShimmy'),
+      kfShimmyOut: document.getElementById('kfShimmyOut'),
+      kfOpacity: document.getElementById('kfOpacity'),
+      kfOpacityOut: document.getElementById('kfOpacityOut'),
       clipIntensity: document.getElementById('clipIntensity'),
       clipIntensityOut: document.getElementById('clipIntensityOut'),
       clipToggles: document.getElementById('clipToggles'),
-      toggleBtnGlitch: document.getElementById('toggleBtnGlitch'),
-      toggleBtnForce: document.getElementById('toggleBtnForce'),
+      toggleBtn: document.getElementById('toggleBtn'),
+      btnForce: document.getElementById('btnForce'),
+      btnDuration: document.getElementById('btnDuration'),
+      btnDurationOut: document.getElementById('btnDurationOut'),
+      btnDelay: document.getElementById('btnDelay'),
+      btnDelayOut: document.getElementById('btnDelayOut'),
+      btnInfinite: document.getElementById('btnInfinite'),
+      btnIterRow: document.getElementById('btnIterRow'),
+      btnIterCount: document.getElementById('btnIterCount'),
       btnShimmy: document.getElementById('btnShimmy'),
       btnShimmyOut: document.getElementById('btnShimmyOut'),
-      toggleModalGlitch: document.getElementById('toggleModalGlitch'),
+      btnOpacity: document.getElementById('btnOpacity'),
+      btnOpacityOut: document.getElementById('btnOpacityOut'),
+      btnBlur: document.getElementById('btnBlur'),
+      btnBlurOut: document.getElementById('btnBlurOut'),
+      btnSaturate: document.getElementById('btnSaturate'),
+      btnSaturateOut: document.getElementById('btnSaturateOut'),
+      toggleModal: document.getElementById('toggleModal'),
+      modalDuration: document.getElementById('modalDuration'),
+      modalDurationOut: document.getElementById('modalDurationOut'),
+      modalDelay: document.getElementById('modalDelay'),
+      modalDelayOut: document.getElementById('modalDelayOut'),
+      modalInfinite: document.getElementById('modalInfinite'),
+      modalIterRow: document.getElementById('modalIterRow'),
+      modalIterCount: document.getElementById('modalIterCount'),
       modalShimmy: document.getElementById('modalShimmy'),
       modalShimmyOut: document.getElementById('modalShimmyOut'),
+      modalOpacity: document.getElementById('modalOpacity'),
+      modalOpacityOut: document.getElementById('modalOpacityOut'),
       modalBlur: document.getElementById('modalBlur'),
       modalBlurOut: document.getElementById('modalBlurOut'),
+      modalSaturate: document.getElementById('modalSaturate'),
+      modalSaturateOut: document.getElementById('modalSaturateOut'),
       toggleLetters: document.getElementById('toggleLetters'),
       letterPattern: document.getElementById('letterPattern'),
       letterGrid: document.getElementById('letterGrid'),
-      toggleBgFlicker: document.getElementById('toggleBgFlicker'),
-      toggleEdgeFlicker: document.getElementById('toggleEdgeFlicker'),
-      flickerSpeed: document.getElementById('flickerSpeed'),
-      flickerSpeedOut: document.getElementById('flickerSpeedOut'),
-      fireFlicker: document.getElementById('fireFlicker'),
+      toggleBg: document.getElementById('toggleBg'),
+      bgDuration: document.getElementById('bgDuration'),
+      bgDurationOut: document.getElementById('bgDurationOut'),
+      bgDelay: document.getElementById('bgDelay'),
+      bgDelayOut: document.getElementById('bgDelayOut'),
+      bgInfinite: document.getElementById('bgInfinite'),
+      bgIterRow: document.getElementById('bgIterRow'),
+      bgIterCount: document.getElementById('bgIterCount'),
+      bgFlickerOpacity: document.getElementById('bgFlickerOpacity'),
+      bgFlickerOpacityOut: document.getElementById('bgFlickerOpacityOut'),
+      fireBg: document.getElementById('fireBg'),
+      toggleEdge: document.getElementById('toggleEdge'),
+      edgeDuration: document.getElementById('edgeDuration'),
+      edgeDurationOut: document.getElementById('edgeDurationOut'),
+      edgeDelay: document.getElementById('edgeDelay'),
+      edgeDelayOut: document.getElementById('edgeDelayOut'),
+      edgeInfinite: document.getElementById('edgeInfinite'),
+      edgeIterRow: document.getElementById('edgeIterRow'),
+      edgeIterCount: document.getElementById('edgeIterCount'),
+      edgeOpacity: document.getElementById('edgeOpacity'),
+      edgeOpacityOut: document.getElementById('edgeOpacityOut'),
+      fireEdge: document.getElementById('fireEdge'),
       mainTarget: document.getElementById('mainTarget'),
-      mainGlitchLayer: document.getElementById('mainGlitchLayer'),
-      mainHost: document.getElementById('mainHost'),
-      cyberBtn: document.getElementById('cyberBtn'),
       btnGlitchLayer: document.getElementById('btnGlitchLayer'),
-      modalPreview: document.getElementById('modalPreview'),
+      mainHost: document.getElementById('mainHost'),
+      mixCard: document.getElementById('mixCard'),
       modalGlitchLayer: document.getElementById('modalGlitchLayer'),
-      modalTitle: document.getElementById('modalTitle'),
-      modalFlickerBg: document.getElementById('modalFlickerBg'),
+      mixFlickerBg: document.getElementById('mixFlickerBg'),
       mixBadge: document.getElementById('mixBadge'),
+      mainStage: document.getElementById('mainStage'),
       dynamicStyles: document.getElementById('dynamicStyles'),
       themeToggle: document.getElementById('themeToggle'),
       replayBtn: document.getElementById('replayBtn'),
     };
+
+    const effectSections = {
+      kf: document.getElementById('secKf'),
+      btn: document.getElementById('secBtn'),
+      modal: document.getElementById('secModal'),
+      letters: document.getElementById('secLetters'),
+      bg: document.getElementById('secBg'),
+      edge: document.getElementById('secEdge'),
+    };
+
+    function iterValue(infinite, count) {
+      return infinite ? 'infinite' : String(Math.max(1, count));
+    }
 
     function scaleClip(flat, intensity) {
       const factor = intensity / 100;
@@ -912,71 +1019,29 @@
 
     function buildClipVars(intensity, activeClips) {
       const rest = toPolygon(scaleClip(BASE_CLIPS.four, intensity));
-      const vars = CLIP_KEYS.map(key => {
-        const clip = activeClips[key]
-          ? toPolygon(scaleClip(BASE_CLIPS[key], intensity))
-          : rest;
+      return CLIP_KEYS.map(key => {
+        const clip = activeClips[key] ? toPolygon(scaleClip(BASE_CLIPS[key], intensity)) : rest;
         return `--clip-${key}: ${clip};`;
       }).join('\n');
-      return vars;
     }
 
-    function buildKeyframes(activeClips) {
+    function buildGlitchKeyframes(name, activeClips, shimmyVar) {
       const pick = (key) => (activeClips[key] ? `var(--clip-${key})` : 'var(--clip-four)');
-      return `@keyframes glitch {
+      return `@keyframes ${name} {
       0% { clip-path: ${pick('one')}; }
-      2%, 8% {
-        clip-path: ${pick('two')};
-        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
-      }
-      6% {
-        clip-path: ${pick('two')};
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      9% {
-        clip-path: ${pick('two')};
-        transform: translate(0, 0);
-      }
-      10% {
-        clip-path: ${pick('three')};
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      13% {
-        clip-path: ${pick('three')};
-        transform: translate(0, 0);
-      }
-      14%, 21% {
-        clip-path: ${pick('four')};
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      25% {
-        clip-path: ${pick('five')};
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      30% {
-        clip-path: ${pick('five')};
-        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
-      }
-      35%, 45% {
-        clip-path: ${pick('six')};
-        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
-      }
-      40% {
-        clip-path: ${pick('six')};
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      50% {
-        clip-path: ${pick('six')};
-        transform: translate(0, 0);
-      }
-      55% {
-        clip-path: ${pick('seven')};
-        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
-      }
-      60% {
-        clip-path: ${pick('seven')};
-        transform: translate(0, 0);
-      }
+      2%, 8% { clip-path: ${pick('two')}; transform: translate(calc(${shimmyVar} * -1%), 0); }
+      6% { clip-path: ${pick('two')}; transform: translate(calc(${shimmyVar} * 1%), 0); }
+      9% { clip-path: ${pick('two')}; transform: translate(0, 0); }
+      10% { clip-path: ${pick('three')}; transform: translate(calc(${shimmyVar} * 1%), 0); }
+      13% { clip-path: ${pick('three')}; transform: translate(0, 0); }
+      14%, 21% { clip-path: ${pick('four')}; transform: translate(calc(${shimmyVar} * 1%), 0); }
+      25% { clip-path: ${pick('five')}; transform: translate(calc(${shimmyVar} * 1%), 0); }
+      30% { clip-path: ${pick('five')}; transform: translate(calc(${shimmyVar} * -1%), 0); }
+      35%, 45% { clip-path: ${pick('six')}; transform: translate(calc(${shimmyVar} * -1%), 0); }
+      40% { clip-path: ${pick('six')}; transform: translate(calc(${shimmyVar} * 1%), 0); }
+      50% { clip-path: ${pick('six')}; transform: translate(0, 0); }
+      55% { clip-path: ${pick('seven')}; transform: translate(calc(${shimmyVar} * 1%), 0); }
+      60% { clip-path: ${pick('seven')}; transform: translate(0, 0); }
       31%, 61%, 100% { clip-path: ${pick('four')}; }
     }`;
     }
@@ -1034,12 +1099,7 @@
         const label = document.createElement('label');
         const select = document.createElement('select');
         select.dataset.index = i;
-        select.innerHTML = `
-          <option value="">—</option>
-          <option value="x">X</option>
-          <option value="y">Y</option>
-          <option value="xy">XY</option>
-        `;
+        select.innerHTML = '<option value="">—</option><option value="x">X</option><option value="y">Y</option><option value="xy">XY</option>';
         select.value = state.letterCustom[i] || '';
         select.addEventListener('change', () => {
           state.letterCustom[i] = select.value;
@@ -1051,61 +1111,106 @@
       });
     }
 
+    function syncSectionUI() {
+      const map = { kf: state.kf, btn: state.btn, modal: state.modal, letters: state.letters, bg: state.bg, edge: state.edge };
+      Object.entries(map).forEach(([key, on]) => {
+        const sec = effectSections[key];
+        sec.classList.toggle('is-on', on);
+        sec.classList.toggle('is-off', !on);
+      });
+      els.kfIterRow.hidden = state.kfInfinite;
+      els.btnIterRow.hidden = state.btnInfinite;
+      els.modalIterRow.hidden = state.modalInfinite;
+      els.bgIterRow.hidden = state.bgInfinite;
+      els.edgeIterRow.hidden = state.edgeInfinite;
+    }
+
     function updateMixBadge() {
       const active = [];
-      if (state.glitchAnim) active.push('keyframes');
-      if (state.btnGlitch) active.push('btn overlay');
-      if (state.modalGlitch) active.push('modal overlay');
+      if (state.kf) active.push('keyframes');
+      if (state.btn) active.push('btn overlay');
+      if (state.modal) active.push('modal layer');
       if (state.letters) active.push('letters flip');
-      if (state.bgFlicker) active.push('bg flicker');
-      if (state.edgeFlicker) active.push('edge flicker');
+      if (state.bg) active.push('bg flicker');
+      if (state.edge) active.push('edge flicker');
       els.mixBadge.innerHTML = active.length
         ? active.map(a => `<span>${a}</span>`).join('')
-        : '<span style="opacity:0.5">No effects active</span>';
+        : '<span style="opacity:0.5">No effects in mix — toggle above</span>';
     }
 
     function render() {
       const text = state.text || '[coming soon]';
       const isCyber = state.fontStyle === 'cyber';
-      const iteration = state.infinite ? 'infinite' : '1';
       const clipVars = buildClipVars(state.clipIntensity, state.activeClips);
+      const backdropAlpha = state.backdropOpacity / 100;
 
       els.dynamicStyles.textContent = `
         :root {
-          --glitch-duration: ${state.duration}s;
-          --glitch-iteration: ${iteration};
-          --shimmy-distance: ${state.shimmy};
+          --accent: ${state.accent};
+          --shadow: ${state.shadow};
+          --stage-text: ${state.stageText};
+          --preview-bg: ${state.stageBg};
+          --stage-opacity: ${state.stageOpacity / 100};
+          --backdrop-opacity: ${backdropAlpha};
+          --global-blur: ${state.globalBlur}px;
+          --kf-duration: ${state.kfDuration}s;
+          --kf-delay: ${state.kfDelay}s;
+          --kf-iteration: ${iterValue(state.kfInfinite, state.kfIter)};
+          --kf-shimmy: ${state.kfShimmy};
+          --kf-opacity: ${state.kfOpacity / 100};
+          --btn-duration: ${state.btnDuration}s;
+          --btn-delay: ${state.btnDelay}s;
+          --btn-iteration: ${iterValue(state.btnInfinite, state.btnIter)};
+          --btn-shimmy: ${state.btnShimmy};
+          --btn-opacity: ${state.btnOpacity / 100};
+          --btn-blur: ${state.btnBlur}px;
+          --btn-saturate: ${state.btnSaturate}%;
+          --modal-duration: ${state.modalDuration}s;
+          --modal-delay: ${state.modalDelay}s;
+          --modal-iteration: ${iterValue(state.modalInfinite, state.modalIter)};
+          --modal-shimmy: ${state.modalShimmy};
+          --modal-opacity: ${state.modalOpacity / 100};
+          --modal-blur: ${state.modalBlur}px;
+          --modal-saturate: ${state.modalSaturate}%;
+          --bg-flicker-duration: ${state.bgDuration}s;
+          --bg-flicker-delay: ${state.bgDelay}s;
+          --bg-flicker-iteration: ${iterValue(state.bgInfinite, state.bgIter)};
+          --bg-flicker-opacity: ${state.bgFlickerOpacity / 100};
+          --edge-duration: ${state.edgeDuration}s;
+          --edge-delay: ${state.edgeDelay}s;
+          --edge-iteration: ${iterValue(state.edgeInfinite, state.edgeIter)};
+          --edge-opacity: ${state.edgeOpacity / 100};
         }
-        .glitch-host, .modal__glitch, .preview-target.is-glitch-anim {
-          ${clipVars}
-        }
-        ${buildKeyframes(state.activeClips)}
-        .flicker-backdrop.is-bg-flicker {
-          animation-duration: ${state.flickerSpeed}s;
-        }
+        .glitch-host, .modal__glitch, .preview-target.is-kf-glitch { ${clipVars} }
+        ${buildGlitchKeyframes('glitch-kf', state.activeClips, 'var(--kf-shimmy)')}
+        ${buildGlitchKeyframes('glitch-btn', state.activeClips, 'var(--btn-shimmy)')}
+        ${buildGlitchKeyframes('glitch-modal', state.activeClips, 'var(--modal-shimmy)')}
       `;
 
       els.mainTarget.className = 'preview-target' + (isCyber ? ' cyber' : '');
-      els.mainTarget.classList.toggle('is-glitch-anim', state.glitchAnim);
-      els.mainHost.style.setProperty('--shimmy-distance', state.shimmy);
+      els.mainTarget.classList.toggle('is-kf-glitch', state.kf);
 
       renderLetters(els.mainTarget, text, state.letters, state.letterPattern, state.letterCustom);
-      renderLetters(els.mainGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
+      renderLetters(els.btnGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
+      renderLetters(els.modalGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
 
-      els.cyberBtn.classList.toggle('btn-glitch-enabled', state.btnGlitch);
-      els.cyberBtn.classList.toggle('force-overlay', state.btnForce);
-      els.cyberBtn.style.setProperty('--shimmy-distance', state.btnShimmy);
-      const btnTextEl = els.btnGlitchLayer.querySelector('.btn-glitch-text');
-      if (btnTextEl) {
-        renderLetters(btnTextEl, 'Upgrade', state.letters, state.letterPattern, state.letterCustom);
+      els.mainHost.classList.toggle('btn-glitch-enabled', state.btn);
+      els.mainHost.classList.toggle('force-overlay', state.btnForce);
+      els.mixCard.classList.toggle('is-modal-glitch', state.modal);
+
+      if (state.bg && state.bgInfinite) {
+        els.mixFlickerBg.classList.add('is-bg-flicker');
+      } else if (!state.bgInfinite) {
+        els.mixFlickerBg.classList.remove('is-bg-flicker');
       }
 
-      els.modalPreview.classList.toggle('is-modal-glitch', state.modalGlitch);
-      els.modalPreview.style.setProperty('--modal-blur', `${state.modalBlur}px`);
-      els.modalGlitchLayer.style.setProperty('--shimmy-distance', state.modalShimmy);
-      renderLetters(els.modalGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
-      renderLetters(els.modalTitle, 'Upgrade', state.letters, state.letterPattern, state.letterCustom);
+      if (state.edge && state.edgeInfinite) {
+        els.mixCard.classList.add('is-edge-flicker');
+      } else if (!state.edgeInfinite) {
+        els.mixCard.classList.remove('is-edge-flicker');
+      }
 
+      syncSectionUI();
       updateMixBadge();
     }
 
@@ -1115,7 +1220,6 @@
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.checked = true;
-        cb.dataset.clip = key;
         cb.addEventListener('change', () => {
           state.activeClips[key] = cb.checked;
           render();
@@ -1124,6 +1228,57 @@
         label.appendChild(document.createTextNode(` ${i + 1}`));
         els.clipToggles.appendChild(label);
       });
+    }
+
+    function bindRange(input, out, key, fmt = v => v) {
+      input.addEventListener('input', () => {
+        state[key] = input.type === 'range' ? parseFloat(input.value) : input.value;
+        if (out) out.textContent = fmt(state[key]);
+        render();
+      });
+    }
+
+    function bindToggle(input, key) {
+      input.addEventListener('change', () => {
+        state[key] = input.checked;
+        render();
+      });
+    }
+
+    function bindIterToggles(infiniteEl, rowEl, stateInfiniteKey, stateIterKey, countEl) {
+      infiniteEl.addEventListener('change', () => {
+        state[stateInfiniteKey] = infiniteEl.checked;
+        rowEl.hidden = infiniteEl.checked;
+        render();
+      });
+      countEl.addEventListener('input', () => {
+        state[stateIterKey] = parseInt(countEl.value, 10) || 1;
+        render();
+      });
+    }
+
+    function fireBgFlicker() {
+      if (!state.bg) return;
+      els.mixFlickerBg.classList.remove('is-bg-flicker');
+      void els.mixFlickerBg.offsetWidth;
+      els.mixFlickerBg.classList.add('is-bg-flicker');
+    }
+
+    function fireEdgeFlicker() {
+      if (!state.edge) return;
+      els.mixCard.classList.remove('is-edge-flicker');
+      void els.mixCard.offsetWidth;
+      els.mixCard.classList.add('is-edge-flicker');
+    }
+
+    function replayAnimations() {
+      [els.mainTarget, els.btnGlitchLayer, els.modalGlitchLayer].forEach(el => {
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = '';
+      });
+      fireBgFlicker();
+      fireEdgeFlicker();
     }
 
     function bindControls() {
@@ -1143,72 +1298,46 @@
         render();
       });
 
-      els.toggleGlitchAnim.addEventListener('change', () => {
-        state.glitchAnim = els.toggleGlitchAnim.checked;
-        render();
+      ['accentColor','shadowColor','textColor','stageBg'].forEach(id => {
+        document.getElementById(id).addEventListener('input', (e) => {
+          const map = { accentColor: 'accent', shadowColor: 'shadow', textColor: 'stageText', stageBg: 'stageBg' };
+          state[map[id]] = e.target.value;
+          render();
+        });
       });
 
-      els.duration.addEventListener('input', () => {
-        state.duration = parseFloat(els.duration.value);
-        els.durationOut.textContent = state.duration.toFixed(1);
-        render();
-      });
+      bindRange(els.stageOpacity, els.stageOpacityOut, 'stageOpacity', v => Math.round(v));
+      bindRange(els.backdropOpacity, els.backdropOpacityOut, 'backdropOpacity', v => Math.round(v));
+      bindRange(els.globalBlur, els.globalBlurOut, 'globalBlur', v => Math.round(v));
 
-      els.shimmy.addEventListener('input', () => {
-        state.shimmy = parseInt(els.shimmy.value, 10);
-        els.shimmyOut.textContent = state.shimmy;
-        render();
-      });
+      bindToggle(els.toggleKf, 'kf');
+      bindRange(els.kfDuration, els.kfDurationOut, 'kfDuration', v => v.toFixed(1));
+      bindRange(els.kfDelay, els.kfDelayOut, 'kfDelay', v => v.toFixed(2));
+      bindRange(els.kfShimmy, els.kfShimmyOut, 'kfShimmy', v => Math.round(v));
+      bindRange(els.kfOpacity, els.kfOpacityOut, 'kfOpacity', v => Math.round(v));
+      bindRange(els.clipIntensity, els.clipIntensityOut, 'clipIntensity', v => Math.round(v));
+      bindIterToggles(els.kfInfinite, els.kfIterRow, 'kfInfinite', 'kfIter', els.kfIterCount);
 
-      els.toggleInfinite.addEventListener('change', () => {
-        state.infinite = els.toggleInfinite.checked;
-        render();
-      });
+      bindToggle(els.toggleBtn, 'btn');
+      bindToggle(els.btnForce, 'btnForce');
+      bindRange(els.btnDuration, els.btnDurationOut, 'btnDuration', v => v.toFixed(1));
+      bindRange(els.btnDelay, els.btnDelayOut, 'btnDelay', v => v.toFixed(2));
+      bindRange(els.btnShimmy, els.btnShimmyOut, 'btnShimmy', v => Math.round(v));
+      bindRange(els.btnOpacity, els.btnOpacityOut, 'btnOpacity', v => Math.round(v));
+      bindRange(els.btnBlur, els.btnBlurOut, 'btnBlur', v => Math.round(v));
+      bindRange(els.btnSaturate, els.btnSaturateOut, 'btnSaturate', v => Math.round(v));
+      bindIterToggles(els.btnInfinite, els.btnIterRow, 'btnInfinite', 'btnIter', els.btnIterCount);
 
-      els.clipIntensity.addEventListener('input', () => {
-        state.clipIntensity = parseInt(els.clipIntensity.value, 10);
-        els.clipIntensityOut.textContent = state.clipIntensity;
-        render();
-      });
+      bindToggle(els.toggleModal, 'modal');
+      bindRange(els.modalDuration, els.modalDurationOut, 'modalDuration', v => v.toFixed(1));
+      bindRange(els.modalDelay, els.modalDelayOut, 'modalDelay', v => v.toFixed(2));
+      bindRange(els.modalShimmy, els.modalShimmyOut, 'modalShimmy', v => Math.round(v));
+      bindRange(els.modalOpacity, els.modalOpacityOut, 'modalOpacity', v => Math.round(v));
+      bindRange(els.modalBlur, els.modalBlurOut, 'modalBlur', v => Math.round(v));
+      bindRange(els.modalSaturate, els.modalSaturateOut, 'modalSaturate', v => Math.round(v));
+      bindIterToggles(els.modalInfinite, els.modalIterRow, 'modalInfinite', 'modalIter', els.modalIterCount);
 
-      els.toggleBtnGlitch.addEventListener('change', () => {
-        state.btnGlitch = els.toggleBtnGlitch.checked;
-        render();
-      });
-
-      els.toggleBtnForce.addEventListener('change', () => {
-        state.btnForce = els.toggleBtnForce.checked;
-        els.cyberBtn.classList.toggle('force-overlay', state.btnForce);
-      });
-
-      els.btnShimmy.addEventListener('input', () => {
-        state.btnShimmy = parseInt(els.btnShimmy.value, 10);
-        els.btnShimmyOut.textContent = state.btnShimmy;
-        render();
-      });
-
-      els.toggleModalGlitch.addEventListener('change', () => {
-        state.modalGlitch = els.toggleModalGlitch.checked;
-        render();
-      });
-
-      els.modalShimmy.addEventListener('input', () => {
-        state.modalShimmy = parseInt(els.modalShimmy.value, 10);
-        els.modalShimmyOut.textContent = state.modalShimmy;
-        render();
-      });
-
-      els.modalBlur.addEventListener('input', () => {
-        state.modalBlur = parseInt(els.modalBlur.value, 10);
-        els.modalBlurOut.textContent = state.modalBlur;
-        render();
-      });
-
-      els.toggleLetters.addEventListener('change', () => {
-        state.letters = els.toggleLetters.checked;
-        render();
-      });
-
+      bindToggle(els.toggleLetters, 'letters');
       els.letterPattern.addEventListener('change', () => {
         state.letterPattern = els.letterPattern.value;
         els.letterGrid.hidden = state.letterPattern !== 'custom';
@@ -1216,23 +1345,20 @@
         render();
       });
 
-      els.toggleBgFlicker.addEventListener('change', () => {
-        state.bgFlicker = els.toggleBgFlicker.checked;
-        updateMixBadge();
-      });
+      bindToggle(els.toggleBg, 'bg');
+      bindRange(els.bgDuration, els.bgDurationOut, 'bgDuration', v => v.toFixed(2));
+      bindRange(els.bgDelay, els.bgDelayOut, 'bgDelay', v => v.toFixed(2));
+      bindRange(els.bgFlickerOpacity, els.bgFlickerOpacityOut, 'bgFlickerOpacity', v => Math.round(v));
+      bindIterToggles(els.bgInfinite, els.bgIterRow, 'bgInfinite', 'bgIter', els.bgIterCount);
+      els.fireBg.addEventListener('click', fireBgFlicker);
 
-      els.toggleEdgeFlicker.addEventListener('change', () => {
-        state.edgeFlicker = els.toggleEdgeFlicker.checked;
-        updateMixBadge();
-      });
+      bindToggle(els.toggleEdge, 'edge');
+      bindRange(els.edgeDuration, els.edgeDurationOut, 'edgeDuration', v => v.toFixed(2));
+      bindRange(els.edgeDelay, els.edgeDelayOut, 'edgeDelay', v => v.toFixed(2));
+      bindRange(els.edgeOpacity, els.edgeOpacityOut, 'edgeOpacity', v => Math.round(v));
+      bindIterToggles(els.edgeInfinite, els.edgeIterRow, 'edgeInfinite', 'edgeIter', els.edgeIterCount);
+      els.fireEdge.addEventListener('click', fireEdgeFlicker);
 
-      els.flickerSpeed.addEventListener('input', () => {
-        state.flickerSpeed = parseFloat(els.flickerSpeed.value);
-        els.flickerSpeedOut.textContent = state.flickerSpeed.toFixed(2);
-        render();
-      });
-
-      els.fireFlicker.addEventListener('click', fireFlicker);
       els.replayBtn.addEventListener('click', replayAnimations);
 
       let themeMode = 'auto';
@@ -1242,28 +1368,6 @@
         if (themeMode !== 'auto') document.documentElement.dataset.theme = themeMode;
         els.themeToggle.textContent = `Theme: ${themeMode[0].toUpperCase()}${themeMode.slice(1)}`;
       });
-    }
-
-    function fireFlicker() {
-      if (state.bgFlicker) {
-        els.modalFlickerBg.classList.remove('is-bg-flicker');
-        void els.modalFlickerBg.offsetWidth;
-        els.modalFlickerBg.classList.add('is-bg-flicker');
-      }
-      if (state.edgeFlicker) {
-        els.modalPreview.classList.remove('is-edge-flicker');
-        void els.modalPreview.offsetWidth;
-        els.modalPreview.classList.add('is-edge-flicker');
-      }
-    }
-
-    function replayAnimations() {
-      [els.mainTarget, els.mainGlitchLayer, els.modalGlitchLayer, els.btnGlitchLayer].forEach(el => {
-        el.style.animation = 'none';
-        void el.offsetWidth;
-        el.style.animation = '';
-      });
-      fireFlicker();
     }
 
     initClipToggles();
