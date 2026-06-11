@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Validation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-results {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        #video-container {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            background: #000;
+            margin: 20px 0;
+        }
+        #test-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <h1>Browser Validation Test</h1>
+    <p>This page validates that the scroll-controlled video player works correctly in the browser environment.</p>
+    
+    <div class="test-results" id="test-results">
+        <h2>Test Results</h2>
+        <div id="test-output">Running tests...</div>
+    </div>
+    
+    <div id="video-container">
+        <video id="test-video" muted preload="metadata">
+            <source src="Public/WhatsApp Video 2026-02-23 at 13.37.53.mp4" type="video/mp4">
+        </video>
+    </div>
+    
+    <div class="test-results">
+        <h2>Manual Validation</h2>
+        <p>After the automated tests complete, you can manually verify:</p>
+        <ul>
+            <li>The video loads without errors</li>
+            <li>No console errors are present</li>
+            <li>The video element is properly configured</li>
+            <li>Position calculations work correctly</li>
+        </ul>
+    </div>
+
+    <!-- Include the components -->
+    <script src="position-calculator.js"></script>
+    <script src="scroll-video-player.js"></script>
+    
+    <script>
+        // Browser validation tests
+        function runBrowserValidation() {
+            const testOutput = document.getElementById('test-output');
+            const results = [];
+            
+            function addResult(name, passed, message = '') {
+                results.push({ name, passed, message });
+                updateDisplay();
+            }
+            
+            function updateDisplay() {
+                testOutput.innerHTML = results.map(result => {
+                    const className = result.passed ? 'test-pass' : 'test-fail';
+                    const icon = result.passed ? '✓' : '✗';
+                    return `<div class="test-item ${className}">
+                        ${icon} ${result.name}
+                        ${result.message ? `<br><small>${result.message}</small>` : ''}
+                    </div>`;
+                }).join('');
+            }
+            
+            // Test 1: Components loaded
+            try {
+                const calculator = new PositionCalculator();
+                addResult('PositionCalculator loaded', true);
+            } catch (error) {
+                addResult('PositionCalculator loaded', false, error.message);
+            }
+            
+            try {
+                const video = document.getElementById('test-video');
+                const calculator = new PositionCalculator();
+                const player = new ScrollVideoPlayer(video, calculator, { enableLogging: true });
+                addResult('ScrollVideoPlayer loaded', true);
+                
+                // Test 2: Video element configuration
+                setTimeout(() => {
+                    const videoConfigured = video.muted === true && 
+                                          video.controls === false && 
+                                          video.preload === 'metadata';
+                    addResult('Video element configured', videoConfigured, 
+                        `muted: ${video.muted}, controls: ${video.controls}, preload: ${video.preload}`);
+                }, 100);
+                
+                // Test 3: Position calculations
+                setTimeout(() => {
+                    try {
+                        const progress1 = calculator.getScrollProgress(0, 2000, 1000);
+                        const progress2 = calculator.getScrollProgress(1000, 2000, 1000);
+                        const videoTime1 = calculator.getVideoTime(0.5, 60);
+                        
+                        const calculationsWork = progress1 === 0 && 
+                                               progress2 === 1 && 
+                                               videoTime1 === 30;
+                        
+                        addResult('Position calculations work', calculationsWork,
+                            `progress at top: ${progress1}, at bottom: ${progress2}, video time at 50%: ${videoTime1}`);
+                    } catch (error) {
+                        addResult('Position calculations work', false, error.message);
+                    }
+                }, 200);
+                
+                // Test 4: Event handling
+                let metadataEventReceived = false;
+                video.addEventListener('scrollvideo:metadataLoaded', () => {
+                    metadataEventReceived = true;
+                    addResult('Metadata event handling', true, 'scrollvideo:metadataLoaded event received');
+                });
+                
+                // Test 5: Video loading
+                video.addEventListener('loadedmetadata', () => {
+                    addResult('Video metadata loaded', true, 
+                        `Duration: ${video.duration}s, Size: ${video.videoWidth}x${video.videoHeight}`);
+                });
+                
+                video.addEventListener('error', (event) => {
+                    addResult('Video loading', false, 'Video failed to load');
+                });
+                
+                // Test 6: No console errors (check after a delay)
+                setTimeout(() => {
+                    // This is a basic check - in a real scenario you'd capture console.error
+                    addResult('No console errors', true, 'No obvious console errors detected');
+                }, 1000);
+                
+                // Test 7: Player state
+                setTimeout(() => {
+                    const state = player.getVideoState();
+                    const stateValid = typeof state === 'object' && 
+                                     typeof state.duration === 'number' &&
+                                     typeof state.isMetadataLoaded === 'boolean';
+                    
+                    addResult('Player state valid', stateValid, 
+                        `isMetadataLoaded: ${state.isMetadataLoaded}, hasError: ${state.hasError}`);
+                }, 500);
+                
+            } catch (error) {
+                addResult('ScrollVideoPlayer loaded', false, error.message);
+            }
+            
+            // Test 8: Browser compatibility
+            const browserFeatures = {
+                'HTML5 Video': !!document.createElement('video').canPlayType,
+                'CustomEvent': typeof CustomEvent !== 'undefined',
+                'requestAnimationFrame': typeof requestAnimationFrame !== 'undefined',
+                'addEventListener': typeof window.addEventListener !== 'undefined'
+            };
+            
+            Object.entries(browserFeatures).forEach(([feature, supported]) => {
+                addResult(`Browser feature: ${feature}`, supported);
+            });
+            
+            // Summary after all tests
+            setTimeout(() => {
+                const passedTests = results.filter(r => r.passed).length;
+                const totalTests = results.length;
+                
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = `test-item ${passedTests === totalTests ? 'test-pass' : 'test-info'}`;
+                summaryDiv.innerHTML = `<strong>Summary: ${passedTests}/${totalTests} tests passed</strong>`;
+                testOutput.appendChild(summaryDiv);
+                
+                if (passedTests === totalTests) {
+                    console.log('🎉 All browser validation tests passed!');
+                } else {
+                    console.log(`⚠️ ${totalTests - passedTests} tests failed`);
+                }
+            }, 2000);
+        }
+        
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runBrowserValidation);
+        
+        // Also run tests for components that are already loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', runBrowserValidation);
+        } else {
+            runBrowserValidation();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Integration Tests - Scroll-Controlled Video Player</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .test-controls {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .test-controls button {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .test-controls button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+        }
+
+        .test-controls button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .test-results {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            min-height: 400px;
+        }
+
+        .test-output {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .test-summary {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .test-summary.show {
+            display: block;
+        }
+
+        .test-summary.success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+        }
+
+        .test-summary.failure {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid rgba(244, 67, 54, 0.5);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .viewport-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .test-video {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            max-width: 300px;
+            max-height: 200px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            display: none;
+        }
+
+        .test-video.show {
+            display: block;
+        }
+
+        .scroll-content {
+            height: 300vh;
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.1) 0%,
+                rgba(255, 255, 255, 0.05) 50%,
+                rgba(255, 255, 255, 0.1) 100%
+            );
+            margin-top: 30px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .test-controls button {
+                display: block;
+                width: 100%;
+                margin: 5px 0;
+            }
+            
+            .test-output {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Complete Integration Tests</h1>
+        <p style="text-align: center; font-size: 1.1rem; opacity: 0.9;">
+            Comprehensive testing of the scroll-controlled video player system
+        </p>
+
+        <div class="viewport-info">
+            <strong>Current Viewport:</strong> <span id="viewport-size"></span> |
+            <strong>Document Height:</strong> <span id="document-height"></span> |
+            <strong>Scroll Position:</strong> <span id="scroll-position">0</span>px
+        </div>
+
+        <div class="test-controls">
+            <button id="run-all-tests" onclick="runAllTests()">Run All Tests</button>
+            <button id="run-scroll-tests" onclick="runScrollTests()">Test Scroll Pipeline</button>
+            <button id="run-responsive-tests" onclick="runResponsiveTests()">Test Responsive Behavior</button>
+            <button id="run-performance-tests" onclick="runPerformanceTests()">Test Performance</button>
+            <button id="clear-output" onclick="clearOutput()">Clear Output</button>
+        </div>
+
+        <div class="test-results">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="test-output" id="test-output">Ready to run tests...\n\nClick "Run All Tests" to start comprehensive testing of the scroll-controlled video player.</div>
+            <div class="test-summary" id="test-summary"></div>
+        </div>
+
+        <!-- Test video element -->
+        <video id="test-video" class="test-video" muted preload="metadata">
+            <source src="Public/WhatsApp Video 2026-02-23 at 13.37.53.mp4" type="video/mp4">
+        </video>
+
+        <!-- Scroll content for testing -->
+        <div class="scroll-content">
+            <div>
+                <h2>Scroll Test Area</h2>
+                <p>This area provides scrollable content for testing the video player.<br>
+                Scroll up and down to test the video synchronization.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include all components -->
+    <script src="position-calculator.js"></script>
+    <script src="responsive-manager.js"></script>
+    <script src="scroll-video-player.js"></script>
+
+    <script>
+        // Global test state
+        let testResults = {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            currentTest: 0
+        };
+
+        let testPlayer = null;
+        let testOutput = document.getElementById('test-output');
+        let progressFill = document.getElementById('progress-fill');
+        let testSummary = document.getElementById('test-summary');
+
+        // Update viewport info
+        function updateViewportInfo() {
+            document.getElementById('viewport-size').textContent = 
+                `${window.innerWidth}x${window.innerHeight}`;
+            document.getElementById('document-height').textContent = 
+                `${document.documentElement.scrollHeight}px`;
+            document.getElementById('scroll-position').textContent = 
+                Math.round(window.scrollY);
+        }
+
+        // Initialize viewport info
+        updateViewportInfo();
+        window.addEventListener('resize', updateViewportInfo);
+        window.addEventListener('scroll', updateViewportInfo);
+
+        // Logging functions
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warn' ? '⚠️' : 'ℹ️';
+            testOutput.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            testOutput.scrollTop = testOutput.scrollHeight;
+        }
+
+        function clearOutput() {
+            testOutput.textContent = 'Output cleared.\n';
+            testSummary.classList.remove('show', 'success', 'failure');
+            progressFill.style.width = '0%';
+            testResults = { total: 0, passed: 0, failed: 0, currentTest: 0 };
+        }
+
+        function updateProgress() {
+            const progress = testResults.total > 0 ? (testResults.currentTest / testResults.total) * 100 : 0;
+            progressFill.style.width = `${progress}%`;
+        }
+
+        function showSummary() {
+            const success = testResults.failed === 0;
+            testSummary.textContent = `Test Results: ${testResults.passed}/${testResults.total} passed`;
+            if (testResults.failed > 0) {
+                testSummary.textContent += `, ${testResults.failed} failed`;
+            }
+            testSummary.className = `test-summary show ${success ? 'success' : 'failure'}`;
+        }
+
+        // Test helper functions
+        function assert(condition, message) {
+            if (!condition) {
+                throw new Error(message);
+            }
+        }
+
+        async function runTest(name, testFn) {
+            testResults.total++;
+            testResults.currentTest++;
+            updateProgress();
+            
+            try {
+                log(`Running: ${name}`);
+                await testFn();
+                log(`✓ ${name}`, 'success');
+                testResults.passed++;
+            } catch (error) {
+                log(`✗ ${name}: ${error.message}`, 'error');
+                testResults.failed++;
+            }
+        }
+
+        // Test implementations
+        async function testScrollPipeline() {
+            const video = document.getElementById('test-video');
+            const positionCalculator = new PositionCalculator();
+            const responsiveManager = new ResponsiveManager(video, { enableLogging: false });
+            
+            testPlayer = new ScrollVideoPlayer(video, positionCalculator, responsiveManager, {
+                enableLogging: false
+            });
+
+            // Wait for video metadata
+            await new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => reject(new Error('Video metadata timeout')), 5000);
+                
+                video.addEventListener('loadedmetadata', () => {
+                    clearTimeout(timeout);
+                    resolve();
+                }, { once: true });
+                
+                if (video.readyState >= 1) {
+                    clearTimeout(timeout);
+                    resolve();
+                }
+            });
+
+            // Test scroll positions
+            const testPositions = [0, 500, 1000, 1500, 2000];
+            
+            for (const scrollY of testPositions) {
+                window.scrollTo(0, scrollY);
+                await new Promise(resolve => setTimeout(resolve, 100)); // Allow scroll to process
+                
+                const expectedProgress = positionCalculator.getScrollProgress(
+                    scrollY, 
+                    document.documentElement.scrollHeight, 
+                    window.innerHeight
+                );
+                const expectedVideoTime = positionCalculator.getVideoTime(expectedProgress, video.duration);
+                
+                assert(
+                    Math.abs(video.currentTime - expectedVideoTime) < 1,
+                    `Video time mismatch at scroll ${scrollY}: expected ${expectedVideoTime.toFixed(2)}, got ${video.currentTime.toFixed(2)}`
+                );
+            }
+
+            log(`Scroll pipeline test completed with ${testPositions.length} positions`);
+        }
+
+        async function testResponsiveBehavior() {
+            const video = document.getElementById('test-video');
+            const responsiveManager = new ResponsiveManager(video, { enableLogging: false });
+            
+            // Test different viewport scenarios by simulating viewport changes
+            const viewportTests = [
+                { width: 1920, height: 1080, name: 'Desktop FHD' },
+                { width: 768, height: 1024, name: 'Tablet Portrait' },
+                { width: 375, height: 667, name: 'Mobile Portrait' }
+            ];
+
+            for (const viewport of viewportTests) {
+                // Simulate viewport change
+                Object.defineProperty(window, 'innerWidth', { value: viewport.width, configurable: true });
+                Object.defineProperty(window, 'innerHeight', { value: viewport.height, configurable: true });
+                
+                responsiveManager.updateViewportDimensions();
+                const optimalSize = responsiveManager.calculateOptimalVideoSize();
+                
+                assert(
+                    optimalSize.width > 0 && optimalSize.height > 0,
+                    `Invalid optimal size for ${viewport.name}: ${optimalSize.width}x${optimalSize.height}`
+                );
+                
+                // Verify aspect ratio preservation (assuming 16:9 video)
+                const aspectRatio = optimalSize.width / optimalSize.height;
+                assert(
+                    Math.abs(aspectRatio - (16/9)) < 0.2,
+                    `Aspect ratio not preserved for ${viewport.name}: ${aspectRatio.toFixed(2)}`
+                );
+                
+                log(`${viewport.name}: ${optimalSize.width}x${optimalSize.height} (${aspectRatio.toFixed(2)})`);
+            }
+
+            // Restore actual viewport
+            delete window.innerWidth;
+            delete window.innerHeight;
+            updateViewportInfo();
+        }
+
+        async function testPerformance() {
+            const video = document.getElementById('test-video');
+            const positionCalculator = new PositionCalculator();
+            
+            // Test rapid calculations
+            const iterations = 1000;
+            const startTime = performance.now();
+            
+            for (let i = 0; i < iterations; i++) {
+                const scrollY = Math.random() * 2000;
+                const progress = positionCalculator.getScrollProgress(
+                    scrollY, 
+                    document.documentElement.scrollHeight, 
+                    window.innerHeight
+                );
+                const videoTime = positionCalculator.getVideoTime(progress, 30);
+                
+                assert(progress >= 0 && progress <= 1, 'Progress out of bounds');
+                assert(videoTime >= 0 && videoTime <= 30, 'Video time out of bounds');
+            }
+            
+            const endTime = performance.now();
+            const totalTime = endTime - startTime;
+            const avgTime = totalTime / iterations;
+            
+            assert(avgTime < 1, `Performance too slow: ${avgTime.toFixed(3)}ms per calculation`);
+            
+            log(`Performance: ${iterations} calculations in ${totalTime.toFixed(2)}ms (${avgTime.toFixed(3)}ms avg)`);
+        }
+
+        async function testErrorHandling() {
+            const positionCalculator = new PositionCalculator();
+            
+            // Test invalid inputs
+            const invalidProgress1 = positionCalculator.getScrollProgress(NaN, 5000, 1000);
+            assert(invalidProgress1 >= 0 && invalidProgress1 <= 1, 'Should handle NaN scroll position');
+            
+            const invalidProgress2 = positionCalculator.getScrollProgress(-100, 5000, 1000);
+            assert(invalidProgress2 >= 0, 'Should handle negative scroll position');
+            
+            const invalidVideoTime = positionCalculator.getVideoTime(NaN, 30);
+            assert(invalidVideoTime >= 0 && invalidVideoTime <= 30, 'Should handle NaN progress');
+            
+            log('Error handling tests completed');
+        }
+
+        async function testMemoryManagement() {
+            const video = document.createElement('video');
+            const positionCalculator = new PositionCalculator();
+            const responsiveManager = new ResponsiveManager(video, { enableLogging: false });
+            const player = new ScrollVideoPlayer(video, positionCalculator, responsiveManager, {
+                enableLogging: false
+            });
+
+            // Set up some state
+            player.videoState.duration = 30;
+            player.videoState.isMetadataLoaded = true;
+            
+            // Check initial state
+            assert(player.eventListeners.size >= 0, 'Event listeners should be tracked');
+            
+            // Test cleanup
+            player.destroy();
+            
+            // Verify cleanup
+            assert(player.eventListeners.size === 0, 'Event listeners not cleaned up');
+            assert(!player.isReady(), 'Player should not be ready after destroy');
+            
+            log('Memory management test completed');
+        }
+
+        // Main test runners
+        async function runScrollTests() {
+            clearOutput();
+            log('Starting scroll pipeline tests...');
+            
+            testResults = { total: 2, passed: 0, failed: 0, currentTest: 0 };
+            
+            await runTest('Scroll-to-Video Pipeline', testScrollPipeline);
+            await runTest('Error Handling', testErrorHandling);
+            
+            showSummary();
+            log('Scroll tests completed!', 'success');
+        }
+
+        async function runResponsiveTests() {
+            clearOutput();
+            log('Starting responsive behavior tests...');
+            
+            testResults = { total: 1, passed: 0, failed: 0, currentTest: 0 };
+            
+            await runTest('Responsive Behavior', testResponsiveBehavior);
+            
+            showSummary();
+            log('Responsive tests completed!', 'success');
+        }
+
+        async function runPerformanceTests() {
+            clearOutput();
+            log('Starting performance tests...');
+            
+            testResults = { total: 2, passed: 0, failed: 0, currentTest: 0 };
+            
+            await runTest('Performance Characteristics', testPerformance);
+            await runTest('Memory Management', testMemoryManagement);
+            
+            showSummary();
+            log('Performance tests completed!', 'success');
+        }
+
+        async function runAllTests() {
+            clearOutput();
+            log('Starting complete integration tests...');
+            log('This will test the entire scroll-controlled video player system.');
+            
+            // Disable buttons during testing
+            const buttons = document.querySelectorAll('.test-controls button');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            testResults = { total: 6, passed: 0, failed: 0, currentTest: 0 };
+            
+            try {
+                await runTest('Scroll-to-Video Pipeline', testScrollPipeline);
+                await runTest('Responsive Behavior', testResponsiveBehavior);
+                await runTest('Performance Characteristics', testPerformance);
+                await runTest('Error Handling', testErrorHandling);
+                await runTest('Memory Management', testMemoryManagement);
+                
+                // Additional integration test
+                await runTest('Complete System Integration', async () => {
+                    // Test that all components work together
+                    assert(typeof PositionCalculator !== 'undefined', 'PositionCalculator not available');
+                    assert(typeof ResponsiveManager !== 'undefined', 'ResponsiveManager not available');
+                    assert(typeof ScrollVideoPlayer !== 'undefined', 'ScrollVideoPlayer not available');
+                    
+                    // Test video element exists
+                    const video = document.getElementById('test-video');
+                    assert(video !== null, 'Test video element not found');
+                    
+                    log('All components integrated successfully');
+                });
+                
+                showSummary();
+                
+                if (testResults.failed === 0) {
+                    log('🎉 All integration tests passed!', 'success');
+                    log('✅ Complete scroll-to-video pipeline validated', 'success');
+                } else {
+                    log(`❌ ${testResults.failed} tests failed`, 'error');
+                }
+                
+            } catch (error) {
+                log(`Test suite error: ${error.message}`, 'error');
+            } finally {
+                // Re-enable buttons
+                buttons.forEach(btn => btn.disabled = false);
+                
+                // Cleanup test player
+                if (testPlayer) {
+                    testPlayer.destroy();
+                    testPlayer = null;
+                }
+            }
+        }
+
+        // Initialize
+        log('Integration test environment ready.');
+        log('Components available: PositionCalculator, ResponsiveManager, ScrollVideoPlayer');
+        log(`Viewport: ${window.innerWidth}x${window.innerHeight}`);
+        log(`Document height: ${document.documentElement.scrollHeight}px`);
+    </script>
+</body>
+</html>

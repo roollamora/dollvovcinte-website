@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scroll-Controlled Video Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #0c0c0c 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Enhanced fixed video positioning - Requirements 1.1, 1.2, 1.3, 1.4 */
+        #video-player {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            max-width: 100vw;
+            max-height: 100vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        /* Enhanced responsive layout - Requirements 1.4, 5.1 */
+        @media (max-width: 768px) {
+            #video-player {
+                width: 95vw;
+                height: auto;
+                border-radius: 4px;
+            }
+            
+            body {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #video-player {
+                width: 100vw;
+                height: auto;
+                border-radius: 0;
+                top: 50%;
+            }
+        }
+
+        @media (max-height: 600px) {
+            #video-player {
+                height: 90vh;
+                width: auto;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            #video-player {
+                height: 85vh;
+                width: auto;
+            }
+        }
+
+        /* Enhanced document content for scrolling - Requirements 10.1 */
+        .scroll-content {
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0.9) 0%,
+                rgba(0, 0, 0, 0.3) 30%,
+                rgba(0, 0, 0, 0.1) 50%,
+                rgba(0, 0, 0, 0.3) 70%,
+                rgba(0, 0, 0, 0.9) 100%
+            );
+        }
+
+        .content-section {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .content-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .content-section h2 {
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            margin-bottom: 1.5rem;
+            opacity: 0.95;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .content-section p {
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            max-width: 700px;
+            line-height: 1.7;
+            opacity: 0.85;
+            font-weight: 300;
+        }
+
+        /* Enhanced loading and error states - Requirements 7.3, 10.2 */
+        .video-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2.5rem;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+            min-width: 300px;
+            max-width: 90vw;
+        }
+
+        .video-overlay.show {
+            display: block;
+            animation: fadeInScale 0.3s ease-out;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .video-overlay h3 {
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            font-weight: 400;
+        }
+
+        .video-overlay p {
+            font-size: 1rem;
+            line-height: 1.5;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+        }
+
+        .error-message h3 {
+            color: #ff8a8a;
+        }
+
+        /* Enhanced button styling */
+        .video-overlay button {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 0 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .video-overlay button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+        }
+
+        .video-overlay button:active {
+            transform: translateY(0);
+        }
+
+        .video-overlay button.dismiss {
+            background: linear-gradient(135deg, #666 0%, #555 100%);
+            box-shadow: 0 4px 12px rgba(102, 102, 102, 0.3);
+        }
+
+        .video-overlay button.dismiss:hover {
+            box-shadow: 0 6px 16px rgba(102, 102, 102, 0.4);
+        }
+
+        /* Enhanced scroll indicator */
+        .scroll-indicator {
+            position: fixed;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            text-align: center;
+            opacity: 0.8;
+            animation: pulseGlow 2s ease-in-out infinite;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 1rem 1.5rem;
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { 
+                opacity: 0.6;
+                transform: translateX(-50%) scale(1);
+            }
+            50% { 
+                opacity: 0.9;
+                transform: translateX(-50%) scale(1.05);
+            }
+        }
+
+        .scroll-arrow {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            display: block;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-8px);
+            }
+            60% {
+                transform: translateY(-4px);
+            }
+        }
+
+        .scroll-indicator p {
+            font-size: 0.9rem;
+            margin: 0;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .video-overlay {
+                padding: 2rem;
+                margin: 1rem;
+                border-radius: 8px;
+            }
+            
+            .scroll-indicator {
+                bottom: 2rem;
+                padding: 0.8rem 1.2rem;
+                font-size: 0.85rem;
+            }
+            
+            .scroll-arrow {
+                font-size: 1.5rem;
+            }
+            
+            .content-section {
+                padding: 1.5rem;
+            }
+        }
+
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            #video-player {
+                border: 2px solid #ffffff;
+            }
+            
+            .video-overlay {
+                border: 2px solid #ffffff;
+                background: rgba(0, 0, 0, 0.98);
+            }
+            
+            .scroll-indicator {
+                border: 1px solid #ffffff;
+                background: rgba(0, 0, 0, 0.9);
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            .loading-spinner {
+                animation: none;
+                border-top-color: #ffffff;
+            }
+            
+            .scroll-indicator {
+                animation: none;
+            }
+            
+            .scroll-arrow {
+                animation: none;
+            }
+            
+            .video-overlay.show {
+                animation: none;
+            }
+            
+            #video-player {
+                transition: none;
+            }
+        }
+
+        /* Focus styles for accessibility */
+        .video-overlay button:focus {
+            outline: 2px solid #ffffff;
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            #video-player,
+            .video-overlay,
+            .scroll-indicator {
+                display: none;
+            }
+            
+            .scroll-content {
+                background: white;
+                color: black;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Video element - Requirements 10.1, 10.3 -->
+    <video 
+        id="video-player" 
+        muted 
+        preload="metadata"
+        poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23000'/%3E%3C/svg%3E"
+    >
+        <source src="Public/WhatsApp Video 2026-02-23 at 13.37.53.mp4" type="video/mp4">
+        <p>Your browser does not support the video tag. Please use a modern browser that supports HTML5 video.</p>
+    </video>
+
+    <!-- Loading overlay -->
+    <div id="video-overlay" class="video-overlay show">
+        <div class="loading-spinner"></div>
+        <p>Loading video...</p>
+    </div>
+
+    <!-- Error overlay (hidden by default) -->
+    <div id="error-overlay" class="video-overlay">
+        <div class="error-message">
+            <h3>Video Load Error</h3>
+            <p>Unable to load the video file. Please check that the file exists and try refreshing the page.</p>
+        </div>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="scroll-indicator">
+        <div class="scroll-arrow">↓</div>
+        <p>Scroll to control video</p>
+    </div>
+
+    <!-- Content sections to create scrollable height -->
+    <div class="scroll-content">
+        <section class="content-section">
+            <div>
+                <h2>Scroll-Controlled Video Player</h2>
+                <p>Scroll down to advance the video forward, or scroll up to move backward through the timeline. The video remains fixed in the viewport while your scroll position controls the playback.</p>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <div>
+                <h2>Interactive Experience</h2>
+                <p>This immersive video player synchronizes with your scroll gestures, providing frame-by-frame control over the video timeline. Each scroll movement corresponds to a specific position in the video.</p>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <div>
+                <h2>Responsive Design</h2>
+                <p>The video player adapts to different screen sizes while maintaining aspect ratio and optimal viewport usage. It works seamlessly across desktop, tablet, and mobile devices.</p>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <div>
+                <h2>Smooth Playback</h2>
+                <p>Advanced algorithms ensure smooth video updates without stuttering or lag, even during rapid scroll movements. The experience feels natural and responsive.</p>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <div>
+                <h2>End of Timeline</h2>
+                <p>You've reached the end of the video timeline. Scroll back up to review previous content or continue exploring the interactive video experience.</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Include PositionCalculator component -->
+    <script src="position-calculator.js"></script>
+    <!-- Include ResponsiveManager component -->
+    <script src="responsive-manager.js"></script>
+    <!-- Include ScrollVideoPlayer component -->
+    <script src="scroll-video-player.js"></script>
+    <!-- Include tests for browser testing -->
+    <script src="test-position-calculator.js"></script>
+    <script src="test-scroll-video-player.js"></script>
+    <script src="test-responsive-manager.js"></script>
+    <script src="test-responsive-integration.js"></script>
+    
+    <script>
+        // Complete integration and wiring of all components - Task 8.1
+        // Requirements: 6.1, 6.2, 7.1
+        
+        // Get DOM elements
+        const video = document.getElementById('video-player');
+        const loadingOverlay = document.getElementById('video-overlay');
+        const errorOverlay = document.getElementById('error-overlay');
+        const scrollIndicator = document.querySelector('.scroll-indicator');
+        
+        // Initialize PositionCalculator with enhanced configuration - Requirements 6.3, 6.4, 6.5
+        const positionCalculator = new PositionCalculator();
+        
+        // Initialize ResponsiveManager with comprehensive options - Requirements 5.1, 5.2, 5.3, 5.4
+        const responsiveManager = new ResponsiveManager(video, {
+            enableLogging: true,
+            fillViewport: true,
+            maintainAspectRatio: true,
+            minWidth: 320,
+            minHeight: 180
+        });
+        
+        // Initialize ScrollVideoPlayer with all dependencies wired together - Requirements 6.1, 6.2, 7.1
+        const scrollVideoPlayer = new ScrollVideoPlayer(video, positionCalculator, responsiveManager, {
+            enableLogging: true,
+            smoothing: true,
+            debounceMs: 16 // ~60fps for smooth performance
+        });
+        
+        // Complete event handling pipeline setup
+        console.log('All components initialized and wired together:');
+        console.log('- PositionCalculator: Ready for scroll-to-video mapping');
+        console.log('- ResponsiveManager: Ready for viewport management');  
+        console.log('- ScrollVideoPlayer: Ready with complete integration');
+
+        // Handle ResponsiveManager events
+        video.addEventListener('responsive:viewportSetup', function(event) {
+            console.log('ResponsiveManager: Viewport setup complete');
+            console.log('Optimal video size:', event.detail.optimalSize);
+        });
+
+        video.addEventListener('responsive:resize', function(event) {
+            console.log('ResponsiveManager: Resize handled');
+            console.log('New video size:', event.detail.optimalSize);
+        });
+
+        // Handle ScrollVideoPlayer events
+        video.addEventListener('scrollvideo:metadataLoaded', function(event) {
+            console.log('ScrollVideoPlayer: Video metadata loaded');
+            console.log('Video duration:', event.detail.duration);
+            console.log('Video aspect ratio:', event.detail.aspectRatio);
+            
+            // Hide loading overlay
+            loadingOverlay.classList.remove('show');
+            
+            // Show scroll indicator
+            scrollIndicator.style.display = 'block';
+        });
+
+        video.addEventListener('scrollvideo:videoError', function(event) {
+            console.error('ScrollVideoPlayer: Video error:', event.detail.error);
+            
+            // Hide loading overlay and show error
+            loadingOverlay.classList.remove('show');
+            errorOverlay.classList.add('show');
+            scrollIndicator.style.display = 'none';
+        });
+
+        video.addEventListener('scrollvideo:scrollControlEnabled', function(event) {
+            console.log('ScrollVideoPlayer: Scroll control enabled');
+        });
+
+        video.addEventListener('scrollvideo:positionUpdate', function(event) {
+            // Optional: Handle position updates for debugging or UI updates
+            if (window.DEBUG_SCROLL) {
+                console.log('Position update:', {
+                    progress: event.detail.progress.toFixed(3),
+                    videoTime: event.detail.videoTime.toFixed(2),
+                    scrollY: event.detail.scrollY
+                });
+            }
+        });
+
+        // ResponsiveManager now handles all video sizing automatically
+        // The manual resize handling below is kept as fallback for debugging
+
+        // Legacy responsive video sizing (now handled by ResponsiveManager)
+        function updateVideoSize() {
+            // This function is now primarily for debugging/fallback
+            // ResponsiveManager handles all responsive behavior automatically
+            console.log('Legacy updateVideoSize called - ResponsiveManager should handle this');
+        }
+
+        // The resize event listener is no longer needed as ResponsiveManager handles it
+        // Keeping for backward compatibility and debugging
+        window.addEventListener('resize', function() {
+            console.log('Window resize detected - ResponsiveManager will handle this');
+        });
+
+        // Hide scroll indicator after first scroll
+        let hasScrolled = false;
+        window.addEventListener('scroll', function() {
+            if (!hasScrolled) {
+                hasScrolled = true;
+                scrollIndicator.style.transition = 'opacity 0.5s ease-out';
+                scrollIndicator.style.opacity = '0';
+                setTimeout(() => {
+                    scrollIndicator.style.display = 'none';
+                }, 500);
+            }
+        });
+
+        // Run tests in browser console (for development/debugging)
+        console.log('ScrollVideoPlayer initialized.');
+        console.log('Available test functions:');
+        console.log('- window.runPositionCalculatorTests() - Test PositionCalculator');
+        console.log('- window.runScrollVideoPlayerTests() - Test ScrollVideoPlayer');
+        console.log('- window.runResponsiveManagerTests() - Test ResponsiveManager');
+        console.log('- window.testResponsiveIntegration() - Test Responsive Integration');
+        
+        // Enable debug mode by setting window.DEBUG_SCROLL = true in console
+        window.DEBUG_SCROLL = false;
+
+        // Make ScrollVideoPlayer instance available globally for debugging
+        window.scrollVideoPlayer = scrollVideoPlayer;
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            scrollVideoPlayer.destroy();
+        });
+    </script>
+</body>
+</html>

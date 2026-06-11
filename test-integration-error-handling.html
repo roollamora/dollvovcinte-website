@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Handling Integration Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            height: 200vh; /* Make page scrollable */
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        .status.pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        #video-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        
+        video {
+            max-width: 80vw;
+            max-height: 80vh;
+        }
+        
+        .scroll-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Error Handling and Edge Cases Integration Test</h1>
+    
+    <div class="scroll-indicator" id="scrollIndicator">
+        Scroll: 0px | Progress: 0.000 | Video: 0.00s
+    </div>
+    
+    <div id="video-container">
+        <video id="testVideo" muted>
+            <source src="nonexistent-video.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 1: Video Loading Error Handling</h3>
+        <p>Status: <span class="status pending" id="test1Status">Testing...</span></p>
+        <p>Expected: Error message should appear for missing video file</p>
+        <p id="test1Details">Waiting for video load attempt...</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Edge Case Handling</h3>
+        <p>Status: <span class="status pending" id="test2Status">Testing...</span></p>
+        <p>Expected: Scroll calculations should handle boundary conditions gracefully</p>
+        <p id="test2Details">Testing scroll position calculations...</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Document Height Edge Cases</h3>
+        <p>Status: <span class="status pending" id="test3Status">Testing...</span></p>
+        <p>Expected: Position calculator should handle various document dimensions</p>
+        <p id="test3Details">Testing dimension calculations...</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 4: Video Accessibility Validation</h3>
+        <p>Status: <span class="status pending" id="test4Status">Testing...</span></p>
+        <p>Expected: System should validate video file accessibility</p>
+        <p id="test4Details">Testing accessibility validation...</p>
+        <button onclick="testValidVideo()">Test Valid Video</button>
+        <button onclick="testInvalidVideo()">Test Invalid Video</button>
+    </div>
+    
+    <div style="height: 100px; background: linear-gradient(to bottom, #f0f0f0, #e0e0e0); margin: 20px 0; display: flex; align-items: center; justify-content: center;">
+        <p>Scroll down to test video position mapping...</p>
+    </div>
+    
+    <div style="height: 200px; background: linear-gradient(to bottom, #e0e0e0, #d0d0d0); margin: 20px 0; display: flex; align-items: center; justify-content: center;">
+        <p>Middle section - continue scrolling...</p>
+    </div>
+    
+    <div style="height: 200px; background: linear-gradient(to bottom, #d0d0d0, #c0c0c0); margin: 20px 0; display: flex; align-items: center; justify-content: center;">
+        <p>Bottom section - test boundary conditions</p>
+    </div>
+
+    <!-- Load the components -->
+    <script src="position-calculator.js"></script>
+    <script src="responsive-manager.js"></script>
+    <script src="scroll-video-player.js"></script>
+    
+    <script>
+        let player;
+        let positionCalculator;
+        let testResults = {
+            test1: false,
+            test2: false,
+            test3: false,
+            test4: false
+        };
+        
+        // Initialize components
+        function initializeTests() {
+            console.log('Initializing error handling tests...');
+            
+            positionCalculator = new PositionCalculator();
+            const videoElement = document.getElementById('testVideo');
+            
+            // Test 1: Video Loading Error Handling
+            testVideoErrorHandling(videoElement);
+            
+            // Test 2: Edge Case Handling
+            testEdgeCases();
+            
+            // Test 3: Document Height Edge Cases
+            testDocumentHeightEdgeCases();
+            
+            // Set up scroll indicator
+            setupScrollIndicator();
+        }
+        
+        function testVideoErrorHandling(videoElement) {
+            try {
+                // Create player with invalid video source
+                player = new ScrollVideoPlayer(videoElement, positionCalculator, null, {
+                    enableLogging: true
+                });
+                
+                // Listen for error events
+                videoElement.addEventListener('scrollvideo:videoError', (event) => {
+                    console.log('Video error detected:', event.detail);
+                    
+                    const errorMessage = event.detail.error;
+                    const fallbackAction = event.detail.fallbackAction;
+                    
+                    if (errorMessage && fallbackAction) {
+                        updateTestStatus('test1', true, `Error handled: ${errorMessage} (${fallbackAction})`);
+                    } else {
+                        updateTestStatus('test1', false, 'Error event missing required details');
+                    }
+                });
+                
+                // Timeout fallback
+                setTimeout(() => {
+                    if (!testResults.test1) {
+                        updateTestStatus('test1', false, 'No error event received within timeout');
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                updateTestStatus('test1', false, `Exception: ${error.message}`);
+            }
+        }
+        
+        function testEdgeCases() {
+            try {
+                const edgeCases = [
+                    { scrollY: -100, documentHeight: 2000, viewportHeight: 600, name: 'Negative scroll' },
+                    { scrollY: 0, documentHeight: 400, viewportHeight: 600, name: 'Short document' },
+                    { scrollY: NaN, documentHeight: 2000, viewportHeight: 600, name: 'NaN scroll' },
+                    { scrollY: 1000, documentHeight: 1000, viewportHeight: 600, name: 'Scroll at max' }
+                ];
+                
+                let passedTests = 0;
+                const totalTests = edgeCases.length;
+                
+                edgeCases.forEach(testCase => {
+                    const progress = positionCalculator.getScrollProgress(
+                        testCase.scrollY, 
+                        testCase.documentHeight, 
+                        testCase.viewportHeight
+                    );
+                    
+                    if (typeof progress === 'number' && isFinite(progress) && progress >= 0 && progress <= 1) {
+                        passedTests++;
+                        console.log(`✓ ${testCase.name}: ${progress.toFixed(3)}`);
+                    } else {
+                        console.log(`✗ ${testCase.name}: Invalid progress ${progress}`);
+                    }
+                });
+                
+                const success = passedTests === totalTests;
+                updateTestStatus('test2', success, `${passedTests}/${totalTests} edge cases handled correctly`);
+                
+            } catch (error) {
+                updateTestStatus('test2', false, `Exception: ${error.message}`);
+            }
+        }
+        
+        function testDocumentHeightEdgeCases() {
+            try {
+                let passedTests = 0;
+                let totalTests = 0;
+                
+                // Test enhanced methods if available
+                if (typeof positionCalculator.getDocumentHeight === 'function') {
+                    totalTests++;
+                    const height = positionCalculator.getDocumentHeight();
+                    if (typeof height === 'number' && height > 0 && isFinite(height)) {
+                        passedTests++;
+                        console.log(`✓ Document height: ${height}px`);
+                    } else {
+                        console.log(`✗ Invalid document height: ${height}`);
+                    }
+                }
+                
+                if (typeof positionCalculator.getViewportHeight === 'function') {
+                    totalTests++;
+                    const height = positionCalculator.getViewportHeight();
+                    if (typeof height === 'number' && height > 0 && isFinite(height)) {
+                        passedTests++;
+                        console.log(`✓ Viewport height: ${height}px`);
+                    } else {
+                        console.log(`✗ Invalid viewport height: ${height}`);
+                    }
+                }
+                
+                if (typeof positionCalculator.getCurrentScrollPosition === 'function') {
+                    totalTests++;
+                    const scrollY = positionCalculator.getCurrentScrollPosition();
+                    if (typeof scrollY === 'number' && scrollY >= 0 && isFinite(scrollY)) {
+                        passedTests++;
+                        console.log(`✓ Scroll position: ${scrollY}px`);
+                    } else {
+                        console.log(`✗ Invalid scroll position: ${scrollY}`);
+                    }
+                }
+                
+                if (totalTests === 0) {
+                    updateTestStatus('test3', true, 'Enhanced methods not available (using fallbacks)');
+                } else {
+                    const success = passedTests === totalTests;
+                    updateTestStatus('test3', success, `${passedTests}/${totalTests} dimension calculations working`);
+                }
+                
+            } catch (error) {
+                updateTestStatus('test3', false, `Exception: ${error.message}`);
+            }
+        }
+        
+        function testValidVideo() {
+            // Test with a valid video source (you would need to provide a real video file)
+            const videoElement = document.getElementById('testVideo');
+            videoElement.src = 'https://www.w3schools.com/html/mov_bbb.mp4'; // Example video
+            
+            if (player && typeof player.validateVideoAccessibility === 'function') {
+                player.validateVideoAccessibility(videoElement.src)
+                    .then(isValid => {
+                        updateTestStatus('test4', isValid, `Valid video test: ${isValid ? 'Passed' : 'Failed'}`);
+                    })
+                    .catch(error => {
+                        updateTestStatus('test4', false, `Valid video test error: ${error.message}`);
+                    });
+            } else {
+                updateTestStatus('test4', false, 'Video accessibility validation not available');
+            }
+        }
+        
+        function testInvalidVideo() {
+            if (player && typeof player.validateVideoAccessibility === 'function') {
+                player.validateVideoAccessibility('nonexistent-video.mp4')
+                    .then(isValid => {
+                        updateTestStatus('test4', !isValid, `Invalid video test: ${!isValid ? 'Passed' : 'Failed'}`);
+                    })
+                    .catch(error => {
+                        updateTestStatus('test4', true, `Invalid video test correctly failed: ${error.message}`);
+                    });
+            } else {
+                updateTestStatus('test4', false, 'Video accessibility validation not available');
+            }
+        }
+        
+        function setupScrollIndicator() {
+            const indicator = document.getElementById('scrollIndicator');
+            
+            function updateIndicator() {
+                const scrollY = window.scrollY;
+                const documentHeight = document.documentElement.scrollHeight;
+                const viewportHeight = window.innerHeight;
+                
+                const progress = positionCalculator.getScrollProgress(scrollY, documentHeight, viewportHeight);
+                const videoTime = positionCalculator.getVideoTime(progress, 10); // Assume 10s video
+                
+                indicator.textContent = `Scroll: ${scrollY}px | Progress: ${progress.toFixed(3)} | Video: ${videoTime.toFixed(2)}s`;
+            }
+            
+            window.addEventListener('scroll', updateIndicator);
+            updateIndicator(); // Initial update
+        }
+        
+        function updateTestStatus(testId, passed, details) {
+            testResults[testId] = passed;
+            
+            const statusElement = document.getElementById(`${testId}Status`);
+            const detailsElement = document.getElementById(`${testId}Details`);
+            
+            statusElement.className = `status ${passed ? 'pass' : 'fail'}`;
+            statusElement.textContent = passed ? 'PASS' : 'FAIL';
+            detailsElement.textContent = details;
+            
+            console.log(`${testId}: ${passed ? 'PASS' : 'FAIL'} - ${details}`);
+        }
+        
+        // Initialize tests when page loads
+        document.addEventListener('DOMContentLoaded', initializeTests);
+    </script>
+</body>
+</html>

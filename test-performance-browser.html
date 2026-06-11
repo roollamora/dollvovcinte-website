@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Optimization Tests</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-summary {
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        #video {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>ScrollVideoPlayer Performance Optimization Tests</h1>
+    
+    <div class="test-container">
+        <h2>Test Environment</h2>
+        <video id="video" muted>
+            <source src="Public/WhatsApp Video 2026-02-23 at 13.37.53.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="test-results"></div>
+        <div id="test-summary" class="test-summary"></div>
+    </div>
+
+    <!-- Include dependencies -->
+    <script src="position-calculator.js"></script>
+    <script src="responsive-manager.js"></script>
+    <script src="scroll-video-player.js"></script>
+
+    <script>
+        // Test framework
+        class TestFramework {
+            constructor() {
+                this.results = [];
+                this.resultsContainer = document.getElementById('test-results');
+                this.summaryContainer = document.getElementById('test-summary');
+            }
+
+            test(name, testFn) {
+                try {
+                    testFn();
+                    this.addResult(name, true, null);
+                } catch (error) {
+                    this.addResult(name, false, error.message);
+                }
+            }
+
+            addResult(name, passed, error) {
+                this.results.push({ name, passed, error });
+                
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+                resultDiv.innerHTML = `
+                    <strong>${passed ? '✓' : '✗'} ${name}</strong>
+                    ${error ? `<br><small>Error: ${error}</small>` : ''}
+                `;
+                this.resultsContainer.appendChild(resultDiv);
+            }
+
+            assert(condition, message) {
+                if (!condition) {
+                    throw new Error(message);
+                }
+            }
+
+            showSummary() {
+                const passed = this.results.filter(r => r.passed).length;
+                const total = this.results.length;
+                const success = passed === total;
+                
+                this.summaryContainer.innerHTML = `
+                    <span style="color: ${success ? 'green' : 'red'}">
+                        ${success ? '✓' : '✗'} Tests Complete: ${passed}/${total} passed
+                    </span>
+                `;
+                
+                return success;
+            }
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', () => {
+            const framework = new TestFramework();
+            
+            // Mock video element for testing
+            const mockVideoElement = {
+                addEventListener: () => {},
+                removeEventListener: () => {},
+                dispatchEvent: () => {},
+                currentTime: 0,
+                duration: 100,
+                videoWidth: 1920,
+                videoHeight: 1080
+            };
+
+            // Test 1: Component initialization with performance features
+            framework.test('Component initializes with performance features', () => {
+                const positionCalculator = new PositionCalculator();
+                const player = new ScrollVideoPlayer(mockVideoElement, positionCalculator, null, {
+                    enableLogging: false
+                });
+                
+                framework.assert(player.scrollState.targetFPS === 60, 'Should have 60fps target');
+                framework.assert(player.scrollState.frameInterval === 1000/60, 'Should have correct frame interval');
+                framework.assert(player.scrollState.throttleTimeout === null, 'Should initialize throttle timeout as null');
+                framework.assert(player.isDestroyed === false, 'Should not be destroyed initially');
+                
+                player.destroy();
+            });
+
+            // Test 2: Event listener management
+            framework.test('Event listener management works correctly', () => {
+                const positionCalculator = new PositionCalculator();
+                const player = new ScrollVideoPlayer(mockVideoElement, positionCalculator, null, {
+                    enableLogging: false
+                });
+                
+                const initialListeners = player.eventListeners.size;
+                
+                // Add a test listener
+                const mockTarget = { 
+                    addEventListener: () => {}, 
+                    removeEventListener: () => {},
+                    tagName: 'DIV'
+                };
+                const mockListener = () => {};
+                
+                player.addEventListener(mockTarget, 'test', mockListener);
+                framework.assert(player.eventListeners.size > initialListeners, 'Should track new listeners');
+                
+                // Check stats
+                const stats = player.getEventListenerStats();
+                framework.assert(stats.total > 0, 'Stats should show active listeners');
+                framework.assert(stats.byType.test === 1, 'Should track listeners by type');
+                
+                // Remove listener
+                player.removeEventListener(mockTarget, 'test', mockListener);
+                
+                player.destroy();
+                framework.assert(player.eventListeners.size === 0, 'Should clean up all listeners on destroy');
+            });
+
+            // Test 3: Memory leak detection
+            framework.test('Memory leak detection works', () => {
+                const positionCalculator = new PositionCalculator();
+                const player = new ScrollVideoPlayer(mockVideoElement, positionCalculator, null, {
+                    enableLogging: false
+                });
+                
+                // Check clean state
+                let analysis = player.checkMemoryLeaks();
+                framework.assert(analysis.isDestroyed === false, 'Should not be destroyed initially');
+                framework.assert(analysis.potentialLeaks.length === 0, 'Should have no leaks initially');
+                
+                // Simulate incomplete cleanup
+                player.isDestroyed = true;
+                const mockTarget = { 
+                    addEventListener: () => {}, 
+                    removeEventListener: () => {},
+                    tagName: 'DIV'
+                };
+                player.eventListeners.set('test_key', {
+                    target: mockTarget,
+                    type: 'test',
+                    listener: () => {},
+                    options: {},
+                    addedAt: Date.now(),
+                    targetKey: 'test'
+                });
+                
+                analysis = player.checkMemoryLeaks();
+                framework.assert(analysis.potentialLeaks.length > 0, 'Should detect potential memory leaks');
+                
+                player.eventListeners.clear();
+            });
+
+            // Test 4: Scroll throttling mechanism
+            framework.test('Scroll throttling mechanism exists', () => {
+                const positionCalculator = new PositionCalculator();
+                const player = new ScrollVideoPlayer(mockVideoElement, positionCalculator, null, {
+                    enableLogging: false
+                });
+                
+                // Check that throttling properties exist
+                framework.assert(typeof player.processScrollUpdate === 'function', 'Should have processScrollUpdate method');
+                framework.assert(player.scrollState.frameInterval > 0, 'Should have positive frame interval');
+                framework.assert(player.scrollState.targetFPS === 60, 'Should target 60fps');
+                
+                player.destroy();
+            });
+
+            // Test 5: Proper cleanup on destroy
+            framework.test('Proper cleanup on destroy', () => {
+                const positionCalculator = new PositionCalculator();
+                const player = new ScrollVideoPlayer(mockVideoElement, positionCalculator, null, {
+                    enableLogging: false
+                });
+                
+                // Add some state
+                player.scrollState.throttleTimeout = setTimeout(() => {}, 1000);
+                player.scrollState.frameRequestId = requestAnimationFrame(() => {});
+                
+                const timeoutId = player.scrollState.throttleTimeout;
+                const rafId = player.scrollState.frameRequestId;
+                
+                player.destroy();
+                
+                // Check cleanup
+                framework.assert(player.isDestroyed === true, 'Should be marked as destroyed');
+                framework.assert(player.scrollState.throttleTimeout === null, 'Should clear throttle timeout');
+                framework.assert(player.scrollState.frameRequestId === null, 'Should clear RAF id');
+                framework.assert(player.videoElement === null, 'Should clear video element reference');
+                framework.assert(player.positionCalculator === null, 'Should clear position calculator reference');
+            });
+
+            // Test 6: Prevent operations after destroy
+            framework.test('Prevents operations after destroy', () => {
+                const positionCalculator = new PositionCalculator();
+                const player = new ScrollVideoPlayer(mockVideoElement, positionCalculator, null, {
+                    enableLogging: false
+                });
+                
+                player.destroy();
+                
+                // Try to add listener after destroy
+                const mockTarget = { 
+                    addEventListener: () => {}, 
+                    removeEventListener: () => {},
+                    tagName: 'DIV'
+                };
+                
+                player.addEventListener(mockTarget, 'test', () => {});
+                framework.assert(player.eventListeners.size === 0, 'Should not add listeners after destroy');
+                
+                // Check isReady returns false
+                framework.assert(player.isReady() === false, 'Should not be ready after destroy');
+            });
+
+            // Show summary
+            setTimeout(() => {
+                framework.showSummary();
+            }, 100);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+.kiro
+.vscode
+.github
+*.md
+test-*
+*-validation*
+comprehensive-browser-validation.html
+final-*
+integration-*
+run-tests.js
+validate-implementation.js
+checkpoint-*
+browser-validation.html
+task-*
+SYSTEM_VALIDATION_REPORT.md
+scroll-player
