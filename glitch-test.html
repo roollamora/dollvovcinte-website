@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glitch Lab — DVCT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Special+Elite&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: Cyber;
+      src: url('https://assets.codepen.io/605876/Blender-Pro-Bold.otf');
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: light dark;
+      --shadow: hsl(10 100% 60%);
+      --accent: hsl(183 38% 57%);
+      --corner: 12px;
+      --border: 2px;
+      --clip-btn: polygon(
+        0 0,
+        100% 0,
+        100% calc(100% - var(--corner)),
+        calc(100% - var(--corner)) 100%,
+        0% 100%
+      );
+      --flicker: linear(
+        0 0%,
+        0.1864 6.17%,
+        0.0001 14.41%,
+        0.5244 20.97%,
+        0.3927 37.91%,
+        0.8115 60.62%,
+        0.9416 61.92%,
+        0.9928 67.98%,
+        0.5032 70.42%,
+        0.9077 96.96%,
+        0.6736 98.74%,
+        1 100%
+      );
+      --lab-bg: light-dark(#f4f4f6, #0d0d0f);
+      --lab-surface: light-dark(#fff, #16161a);
+      --lab-border: light-dark(#d8d8de, #2a2a32);
+      --lab-text: light-dark(#1a1a1f, #ececef);
+      --lab-muted: light-dark(#5c5c68, #9898a4);
+      --lab-accent: hsl(183 38% 42%);
+      --preview-bg: light-dark(#e8e8ec, #08080a);
+      --shimmy-distance: 5;
+      --glitch-duration: 2s;
+      --glitch-iteration: infinite;
+      --clip-intensity: 1;
+    }
+
+    [data-theme="light"] { color-scheme: light only; }
+    [data-theme="dark"] { color-scheme: dark only; }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--lab-bg);
+      color: var(--lab-text);
+      line-height: 1.5;
+    }
+
+    .lab-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      background: color-mix(in srgb, var(--lab-bg) 88%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--lab-border);
+    }
+
+    .lab-header h1 {
+      margin: 0;
+      font-family: Cyber, sans-serif;
+      font-size: 1.25rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .lab-header p {
+      margin: 0.15rem 0 0;
+      font-size: 0.8125rem;
+      color: var(--lab-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-ghost {
+      font: inherit;
+      font-size: 0.8125rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      border: 1px solid var(--lab-border);
+      background: var(--lab-surface);
+      color: var(--lab-text);
+      cursor: pointer;
+    }
+
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      gap: 0;
+      min-height: calc(100vh - 72px);
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .controls {
+      padding: 1rem 1.25rem 2rem;
+      border-right: 1px solid var(--lab-border);
+      overflow-y: auto;
+      max-height: calc(100vh - 72px);
+    }
+
+    .preview-panel {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .section {
+      margin-bottom: 1.25rem;
+      padding: 1rem;
+      border: 1px solid var(--lab-border);
+      border-radius: 10px;
+      background: var(--lab-surface);
+    }
+
+    .section h2 {
+      margin: 0 0 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .section h2 .tag {
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: none;
+      color: var(--lab-muted);
+      font-size: 0.6875rem;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.65rem;
+      font-size: 0.8125rem;
+    }
+
+    .control-row:last-child { margin-bottom: 0; }
+
+    .control-row label { flex: 1; }
+
+    .control-row output,
+    .control-row .value {
+      font-variant-numeric: tabular-nums;
+      color: var(--lab-muted);
+      min-width: 2.5rem;
+      text-align: right;
+    }
+
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 0.45rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid var(--lab-border);
+      background: var(--lab-bg);
+      color: var(--lab-text);
+      font: inherit;
+      font-size: 0.8125rem;
+    }
+
+    .toggle {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle span {
+      position: absolute;
+      inset: 0;
+      background: var(--lab-border);
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle span::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: translate 0.2s;
+    }
+
+    .toggle input:checked + span { background: var(--accent); }
+    .toggle input:checked + span::before { translate: 18px 0; }
+
+    .clip-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.35rem;
+      margin-top: 0.5rem;
+    }
+
+    .clip-grid label {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.6875rem;
+      cursor: pointer;
+    }
+
+    .letter-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.5rem;
+    }
+
+    .letter-grid label {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+      font-size: 0.6875rem;
+      font-family: Cyber, monospace;
+      cursor: pointer;
+    }
+
+    .preview-stage {
+      position: relative;
+      min-height: 220px;
+      border-radius: 12px;
+      border: 1px solid var(--lab-border);
+      background: var(--preview-bg);
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+      overflow: hidden;
+    }
+
+    .preview-stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--lab-muted) 15%, transparent) 1px,
+        transparent 1px 24px
+      ) 0 0 / 24px 24px,
+      linear-gradient(
+        color-mix(in srgb, var(--lab-muted) 15%, transparent) 1px,
+        transparent 1px 24px
+      ) 0 0 / 24px 24px;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .preview-label {
+      font-size: 0.6875rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--lab-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .preview-target {
+      position: relative;
+      font-family: "Special Elite", "Courier New", monospace;
+      font-size: clamp(1.5rem, 5vw, 2.75rem);
+      letter-spacing: 0.1em;
+      color: light-dark(#1a1a1f, #f5f5f5);
+      text-transform: lowercase;
+      z-index: 1;
+    }
+
+    .preview-target.cyber {
+      font-family: Cyber, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+    }
+
+    /* —— Glitch layer (from reference CSS) —— */
+    .letters {
+      display: flex;
+    }
+
+    .letters span[data-flip-x="1"] { scale: -1 1; }
+    .letters span[data-flip-y="1"] { scale: 1 -1; }
+    .letters span[data-flip-xy="1"] { scale: -1 -1; }
+
+    .glitch-host {
+      --shimmy-distance: 5;
+      position: relative;
+      display: inline-block;
+    }
+
+    .glitch-host .glitch-layer,
+    .modal__glitch {
+      --clip-one: polygon(0 2%, 100% 2%, 100% 95%, 95% 95%, 95% 90%, 85% 90%, 85% 95%, 8% 95%, 0 70%);
+      --clip-two: polygon(0 78%, 100% 78%, 100% 100%, 95% 100%, 95% 90%, 85% 90%, 85% 100%, 8% 100%, 0 78%);
+      --clip-three: polygon(0 44%, 100% 44%, 100% 54%, 95% 54%, 95% 54%, 85% 54%, 85% 54%, 8% 54%, 0 54%);
+      --clip-four: polygon(0 0, 100% 0, 100% 0, 95% 0, 95% 0, 85% 0, 85% 0, 8% 0, 0 0);
+      --clip-five: polygon(0 0, 100% 0, 100% 0, 95% 0, 95% 0, 85% 0, 85% 0, 8% 0, 0 0);
+      --clip-six: polygon(0 40%, 100% 40%, 100% 85%, 95% 85%, 95% 85%, 85% 85%, 85% 85%, 8% 85%, 0 70%);
+      --clip-seven: polygon(0 63%, 100% 63%, 100% 80%, 95% 80%, 95% 80%, 85% 80%, 85% 80%, 8% 80%, 0 70%);
+    }
+
+    .preview-target.is-glitch-anim {
+      animation: glitch var(--glitch-duration) var(--glitch-iteration);
+    }
+
+    .glitch-host .glitch-layer {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      color: var(--accent);
+      text-shadow: 0 1px var(--shadow);
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+    }
+
+    .glitch-host.btn-glitch-enabled.force-overlay .glitch-layer,
+    .glitch-host.btn-glitch-enabled:hover .glitch-layer,
+    .glitch-host.btn-glitch-enabled:focus-within .glitch-layer {
+      display: flex;
+      animation: glitch var(--glitch-duration) var(--glitch-iteration);
+    }
+
+    .modal__glitch {
+      --shimmy-distance: 2;
+      position: absolute;
+      inset: 0;
+      padding: 1rem;
+      color: var(--shadow);
+      z-index: 0;
+      pointer-events: none;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      display: none;
+    }
+
+    .modal-preview.is-modal-glitch .modal__glitch {
+      display: block;
+      animation: glitch var(--glitch-duration) var(--glitch-iteration);
+    }
+
+    @keyframes glitch {
+      0% { clip-path: var(--clip-one); }
+      2%, 8% {
+        clip-path: var(--clip-two);
+        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
+      }
+      6% {
+        clip-path: var(--clip-two);
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      9% {
+        clip-path: var(--clip-two);
+        transform: translate(0, 0);
+      }
+      10% {
+        clip-path: var(--clip-three);
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      13% {
+        clip-path: var(--clip-three);
+        transform: translate(0, 0);
+      }
+      14%, 21% {
+        clip-path: var(--clip-four);
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      25% {
+        clip-path: var(--clip-five);
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      30% {
+        clip-path: var(--clip-five);
+        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
+      }
+      35%, 45% {
+        clip-path: var(--clip-six);
+        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
+      }
+      40% {
+        clip-path: var(--clip-six);
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      50% {
+        clip-path: var(--clip-six);
+        transform: translate(0, 0);
+      }
+      55% {
+        clip-path: var(--clip-seven);
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      60% {
+        clip-path: var(--clip-seven);
+        transform: translate(0, 0);
+      }
+      31%, 61%, 100% { clip-path: var(--clip-four); }
+    }
+
+    @keyframes flicker {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes bg-flicker {
+      0% { background: light-dark(hsl(0 0% 100% / 0.65), hsl(0 0% 0% / 0.65)); }
+      100% { background: var(--accent); }
+    }
+
+    /* Cyber button demo */
+    .cyber-btn {
+      --corner: 12px;
+      --border: 1px;
+      --clip: var(--clip-btn);
+      font-family: Cyber, sans-serif;
+      width: 160px;
+      text-align: left;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      border: 0;
+      background: transparent;
+      position: relative;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+
+    .cyber-btn .backdrop {
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      background: light-dark(hsl(0 0% 100% / 0.4), hsl(0 0% 0% / 0.4));
+      clip-path: var(--clip);
+      pointer-events: none;
+      backdrop-filter: saturate(180%) blur(6px);
+      transition: background 0.15s;
+    }
+
+    .cyber-btn:hover .backdrop,
+    .cyber-btn:focus-visible .backdrop {
+      background: var(--accent);
+    }
+
+    .cyber-btn:hover,
+    .cyber-btn:focus-visible {
+      color: canvas;
+    }
+
+    .cyber-btn kbd {
+      color: canvas;
+      font-weight: bold;
+      width: 20px;
+      aspect-ratio: 1;
+      font-size: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-grid;
+      place-items: center;
+    }
+
+    .cyber-btn .glitch-layer {
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    .cyber-btn.force-overlay .glitch-layer { color: canvas; }
+
+    .demo-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Modal preview mini */
+    .modal-preview {
+      --corner: 12px;
+      --border: 2px;
+      --clip: polygon(
+        0 0, 100% 0,
+        100% calc(100% - var(--corner)),
+        calc(100% - var(--corner)) 100%,
+        0% 100%
+      );
+      position: relative;
+      width: min(100%, 320px);
+      font-family: Cyber, sans-serif;
+      color: var(--accent);
+      padding: 0;
+    }
+
+    .modal-preview .modal__body {
+      position: relative;
+      backdrop-filter: saturate(180%) blur(6px);
+      clip-path: inset(0 -100% 0 0);
+      border: var(--border) solid var(--accent);
+      padding: 1rem;
+      z-index: 1;
+    }
+
+    .modal-preview h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+      text-transform: uppercase;
+    }
+
+    .modal-preview::before {
+      content: "";
+      position: absolute;
+      top: 1px;
+      bottom: 1px;
+      right: 100%;
+      width: 1rem;
+      border: var(--border) solid var(--accent);
+      background: var(--accent);
+      mask: linear-gradient(#fff, hsl(0 0% 100% / 0.6) 15% 95%, #fff);
+      opacity: 1;
+    }
+
+    .modal-preview.is-edge-flicker::before {
+      animation: flicker 0.625s var(--flicker) none;
+    }
+
+    .flicker-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      clip-path: var(--clip);
+      background: light-dark(hsl(0 0% 100% / 0.4), hsl(0 0% 0% / 0.4));
+    }
+
+    .flicker-backdrop.is-bg-flicker {
+      animation: bg-flicker 0.25s var(--flicker);
+    }
+
+    .mix-badge {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.75rem;
+    }
+
+    .mix-badge span {
+      font-size: 0.625rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .hint {
+      font-size: 0.6875rem;
+      color: var(--lab-muted);
+      margin-top: 0.5rem;
+    }
+
+    .back-link {
+      color: var(--lab-muted);
+      font-size: 0.8125rem;
+      text-decoration: none;
+    }
+
+    .back-link:hover { color: var(--accent); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .preview-target.is-glitch-anim,
+      .glitch-host .glitch-layer,
+      .modal__glitch,
+      .flicker-backdrop.is-bg-flicker,
+      .modal-preview.is-edge-flicker::before {
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="lab-header">
+    <div>
+      <h1>Glitch Lab</h1>
+      <p>Mix &amp; preview all glitch effects from the Cyber UI system</p>
+    </div>
+    <div class="header-actions">
+      <a class="back-link" href="/">← Home</a>
+      <button type="button" class="btn-ghost" id="themeToggle" aria-label="Toggle theme">Theme: Auto</button>
+      <button type="button" class="btn-ghost" id="replayBtn">Replay animations</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="controls" aria-label="Effect controls">
+      <div class="section">
+        <h2>Preview text</h2>
+        <div class="control-row">
+          <label for="previewText">Sample copy</label>
+        </div>
+        <input type="text" id="previewText" value="[coming soon]" maxlength="32">
+        <div class="control-row" style="margin-top: 0.65rem;">
+          <label for="fontStyle">Font style</label>
+        </div>
+        <select id="fontStyle">
+          <option value="mono">Special Elite — [coming soon]</option>
+          <option value="cyber">Cyber — UPGRADE</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <h2>1 · Glitch keyframes</h2>
+        <div class="control-row">
+          <label for="toggleGlitchAnim">Clip-path + shimmy animation</label>
+          <label class="toggle"><input type="checkbox" id="toggleGlitchAnim"><span></span></label>
+        </div>
+        <div class="control-row">
+          <label for="duration">Duration <output id="durationOut">2.0</output>s</label>
+        </div>
+        <input type="range" id="duration" min="0.3" max="6" step="0.1" value="2">
+        <div class="control-row">
+          <label for="shimmy">Shimmy distance <output id="shimmyOut">5</output>%</label>
+        </div>
+        <input type="range" id="shimmy" min="0" max="20" step="1" value="5">
+        <div class="control-row">
+          <label for="toggleInfinite">Loop infinitely</label>
+          <label class="toggle"><input type="checkbox" id="toggleInfinite" checked><span></span></label>
+        </div>
+        <div class="control-row">
+          <label for="clipIntensity">Clip intensity <output id="clipIntensityOut">100</output>%</label>
+        </div>
+        <input type="range" id="clipIntensity" min="0" max="200" step="5" value="100">
+        <p class="hint">Active clip phases:</p>
+        <div class="clip-grid" id="clipToggles"></div>
+      </div>
+
+      <div class="section">
+        <h2>2 · Button overlay</h2>
+        <div class="control-row">
+          <label for="toggleBtnGlitch">Hover/focus glitch overlay</label>
+          <label class="toggle"><input type="checkbox" id="toggleBtnGlitch"><span></span></label>
+        </div>
+        <div class="control-row">
+          <label for="toggleBtnForce">Force overlay visible</label>
+          <label class="toggle"><input type="checkbox" id="toggleBtnForce"><span></span></label>
+        </div>
+        <div class="control-row">
+          <label for="btnShimmy">Button shimmy <output id="btnShimmyOut">5</output>%</label>
+        </div>
+        <input type="range" id="btnShimmy" min="0" max="20" step="1" value="5">
+      </div>
+
+      <div class="section">
+        <h2>3 · Modal overlay</h2>
+        <div class="control-row">
+          <label for="toggleModalGlitch">Modal __glitch layer</label>
+          <label class="toggle"><input type="checkbox" id="toggleModalGlitch"><span></span></label>
+        </div>
+        <div class="control-row">
+          <label for="modalShimmy">Modal shimmy <output id="modalShimmyOut">2</output>%</label>
+        </div>
+        <input type="range" id="modalShimmy" min="0" max="20" step="1" value="2">
+      </div>
+
+      <div class="section">
+        <h2>4 · Letters flip</h2>
+        <div class="control-row">
+          <label for="toggleLetters">Static scale distortion</label>
+          <label class="toggle"><input type="checkbox" id="toggleLetters"><span></span></label>
+        </div>
+        <div class="control-row">
+          <label for="letterPattern">Pattern preset</label>
+        </div>
+        <select id="letterPattern">
+          <option value="default">Default (2,5 · 3,6,7)</option>
+          <option value="alternate-x">Alternate flip X</option>
+          <option value="alternate-y">Alternate flip Y</option>
+          <option value="all-xy">All flip XY</option>
+          <option value="custom">Custom per letter</option>
+        </select>
+        <div class="letter-grid" id="letterGrid" hidden></div>
+      </div>
+
+      <div class="section">
+        <h2>5 · Flicker <span class="tag">(related, not core glitch)</span></h2>
+        <div class="control-row">
+          <label for="toggleBgFlicker">Background flicker (bg-flicker)</label>
+          <label class="toggle"><input type="checkbox" id="toggleBgFlicker"><span></span></label>
+        </div>
+        <div class="control-row">
+          <label for="toggleEdgeFlicker">Modal edge flicker</label>
+          <label class="toggle"><input type="checkbox" id="toggleEdgeFlicker"><span></span></label>
+        </div>
+        <div class="control-row">
+          <label for="flickerSpeed">Flicker speed <output id="flickerSpeedOut">0.25</output>s</label>
+        </div>
+        <input type="range" id="flickerSpeed" min="0.1" max="1.5" step="0.05" value="0.25">
+        <button type="button" class="btn-ghost" id="fireFlicker" style="width:100%; margin-top:0.5rem;">Fire flicker once</button>
+      </div>
+    </aside>
+
+    <main class="preview-panel">
+      <div>
+        <div class="preview-label">Live mix preview</div>
+        <div class="preview-stage" id="mainStage">
+          <div class="glitch-host" id="mainHost">
+            <div class="preview-target" id="mainTarget">[coming soon]</div>
+            <div class="glitch-layer letters" id="mainGlitchLayer" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="mix-badge" id="mixBadge"></div>
+      </div>
+
+      <div class="demo-row">
+        <div>
+          <div class="preview-label">Cyber button · aria-label Upgrade</div>
+          <button type="button" class="cyber-btn glitch-host" id="cyberBtn" aria-label="Upgrade">
+            <span class="backdrop"></span>
+            <kbd>U</kbd>
+            <span class="btn-label">Upgrade</span>
+            <span class="glitch-layer" id="btnGlitchLayer" aria-hidden="true">
+              <kbd>U</kbd><span class="btn-glitch-text letters">Upgrade</span>
+            </span>
+          </button>
+          <p class="hint">Hover or focus — or force overlay in controls</p>
+        </div>
+
+        <div>
+          <div class="preview-label">Modal · modal__glitch</div>
+          <div class="modal-preview" id="modalPreview">
+            <div class="flicker-backdrop" id="modalFlickerBg"></div>
+            <div class="modal__glitch letters" id="modalGlitchLayer" aria-hidden="true"></div>
+            <div class="modal__body">
+              <h3 class="letters" id="modalTitle"></h3>
+              <p style="font-size:0.75rem; opacity:0.7; margin:0;">Confirm system upgrade?</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <style id="dynamicStyles"></style>
+
+  <script>
+    const BASE_CLIPS = {
+      one: [0,2, 100,2, 100,95, 95,95, 95,90, 85,90, 85,95, 8,95, 0,70],
+      two: [0,78, 100,78, 100,100, 95,100, 95,90, 85,90, 85,100, 8,100, 0,78],
+      three: [0,44, 100,44, 100,54, 95,54, 95,54, 85,54, 85,54, 8,54, 0,54],
+      four: [0,0, 100,0, 100,0, 95,0, 95,0, 85,0, 85,0, 8,0, 0,0],
+      five: [0,0, 100,0, 100,0, 95,0, 95,0, 85,0, 85,0, 8,0, 0,0],
+      six: [0,40, 100,40, 100,85, 95,85, 95,85, 85,85, 85,85, 8,85, 0,70],
+      seven: [0,63, 100,63, 100,80, 95,80, 95,80, 85,80, 85,80, 8,80, 0,70],
+    };
+
+    const CLIP_KEYS = ['one','two','three','four','five','six','seven'];
+    const CLIP_PHASE_MAP = {
+      one: [0],
+      two: [2, 6, 8, 9],
+      three: [10, 13],
+      four: [14, 21, 31, 61, 100],
+      five: [25, 30],
+      six: [35, 40, 45, 50],
+      seven: [55, 60],
+    };
+
+    const state = {
+      text: '[coming soon]',
+      fontStyle: 'mono',
+      glitchAnim: false,
+      duration: 2,
+      shimmy: 5,
+      infinite: true,
+      clipIntensity: 100,
+      activeClips: Object.fromEntries(CLIP_KEYS.map(k => [k, true])),
+      btnGlitch: false,
+      btnForce: false,
+      btnShimmy: 5,
+      modalGlitch: false,
+      modalShimmy: 2,
+      letters: false,
+      letterPattern: 'default',
+      letterCustom: [],
+      bgFlicker: false,
+      edgeFlicker: false,
+      flickerSpeed: 0.25,
+    };
+
+    const els = {
+      previewText: document.getElementById('previewText'),
+      fontStyle: document.getElementById('fontStyle'),
+      toggleGlitchAnim: document.getElementById('toggleGlitchAnim'),
+      duration: document.getElementById('duration'),
+      durationOut: document.getElementById('durationOut'),
+      shimmy: document.getElementById('shimmy'),
+      shimmyOut: document.getElementById('shimmyOut'),
+      toggleInfinite: document.getElementById('toggleInfinite'),
+      clipIntensity: document.getElementById('clipIntensity'),
+      clipIntensityOut: document.getElementById('clipIntensityOut'),
+      clipToggles: document.getElementById('clipToggles'),
+      toggleBtnGlitch: document.getElementById('toggleBtnGlitch'),
+      toggleBtnForce: document.getElementById('toggleBtnForce'),
+      btnShimmy: document.getElementById('btnShimmy'),
+      btnShimmyOut: document.getElementById('btnShimmyOut'),
+      toggleModalGlitch: document.getElementById('toggleModalGlitch'),
+      modalShimmy: document.getElementById('modalShimmy'),
+      modalShimmyOut: document.getElementById('modalShimmyOut'),
+      toggleLetters: document.getElementById('toggleLetters'),
+      letterPattern: document.getElementById('letterPattern'),
+      letterGrid: document.getElementById('letterGrid'),
+      toggleBgFlicker: document.getElementById('toggleBgFlicker'),
+      toggleEdgeFlicker: document.getElementById('toggleEdgeFlicker'),
+      flickerSpeed: document.getElementById('flickerSpeed'),
+      flickerSpeedOut: document.getElementById('flickerSpeedOut'),
+      fireFlicker: document.getElementById('fireFlicker'),
+      mainTarget: document.getElementById('mainTarget'),
+      mainGlitchLayer: document.getElementById('mainGlitchLayer'),
+      mainHost: document.getElementById('mainHost'),
+      cyberBtn: document.getElementById('cyberBtn'),
+      btnGlitchLayer: document.getElementById('btnGlitchLayer'),
+      modalPreview: document.getElementById('modalPreview'),
+      modalGlitchLayer: document.getElementById('modalGlitchLayer'),
+      modalTitle: document.getElementById('modalTitle'),
+      modalFlickerBg: document.getElementById('modalFlickerBg'),
+      mixBadge: document.getElementById('mixBadge'),
+      dynamicStyles: document.getElementById('dynamicStyles'),
+      themeToggle: document.getElementById('themeToggle'),
+      replayBtn: document.getElementById('replayBtn'),
+    };
+
+    function scaleClip(flat, intensity) {
+      const factor = intensity / 100;
+      const out = [];
+      for (let i = 0; i < flat.length; i += 2) {
+        const x = flat[i];
+        const y = flat[i + 1];
+        if (x === 0 || x === 100) out.push(x, y === 0 || y === 100 ? y : 50 + (y - 50) * factor);
+        else out.push(50 + (x - 50) * factor, 50 + (y - 50) * factor);
+      }
+      return out;
+    }
+
+    function toPolygon(flat) {
+      const pairs = [];
+      for (let i = 0; i < flat.length; i += 2) pairs.push(`${flat[i]}% ${flat[i + 1]}%`);
+      return `polygon(${pairs.join(', ')})`;
+    }
+
+    function buildClipVars(intensity, activeClips) {
+      const rest = toPolygon(scaleClip(BASE_CLIPS.four, intensity));
+      const vars = CLIP_KEYS.map(key => {
+        const clip = activeClips[key]
+          ? toPolygon(scaleClip(BASE_CLIPS[key], intensity))
+          : rest;
+        return `--clip-${key}: ${clip};`;
+      }).join('\n');
+      return vars;
+    }
+
+    function buildKeyframes(activeClips) {
+      const pick = (key) => (activeClips[key] ? `var(--clip-${key})` : 'var(--clip-four)');
+      return `@keyframes glitch {
+      0% { clip-path: ${pick('one')}; }
+      2%, 8% {
+        clip-path: ${pick('two')};
+        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
+      }
+      6% {
+        clip-path: ${pick('two')};
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      9% {
+        clip-path: ${pick('two')};
+        transform: translate(0, 0);
+      }
+      10% {
+        clip-path: ${pick('three')};
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      13% {
+        clip-path: ${pick('three')};
+        transform: translate(0, 0);
+      }
+      14%, 21% {
+        clip-path: ${pick('four')};
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      25% {
+        clip-path: ${pick('five')};
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      30% {
+        clip-path: ${pick('five')};
+        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
+      }
+      35%, 45% {
+        clip-path: ${pick('six')};
+        transform: translate(calc(var(--shimmy-distance) * -1%), 0);
+      }
+      40% {
+        clip-path: ${pick('six')};
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      50% {
+        clip-path: ${pick('six')};
+        transform: translate(0, 0);
+      }
+      55% {
+        clip-path: ${pick('seven')};
+        transform: translate(calc(var(--shimmy-distance) * 1%), 0);
+      }
+      60% {
+        clip-path: ${pick('seven')};
+        transform: translate(0, 0);
+      }
+      31%, 61%, 100% { clip-path: ${pick('four')}; }
+    }`;
+    }
+
+    function splitLetters(text) {
+      return [...text].map((ch, i) => {
+        const span = document.createElement('span');
+        span.textContent = ch === ' ' ? '\u00a0' : ch;
+        span.dataset.index = i;
+        return span;
+      });
+    }
+
+    function applyLetterPattern(spans, pattern, custom) {
+      spans.forEach((span, i) => {
+        span.removeAttribute('data-flip-x');
+        span.removeAttribute('data-flip-y');
+        span.removeAttribute('data-flip-xy');
+        const idx = i + 1;
+        if (pattern === 'default') {
+          if ([2, 5].includes(idx)) span.dataset.flipY = '1';
+          if ([3, 6, 7].includes(idx)) span.dataset.flipXy = '1';
+        } else if (pattern === 'alternate-x') {
+          if (i % 2 === 0) span.dataset.flipX = '1';
+        } else if (pattern === 'alternate-y') {
+          if (i % 2 === 1) span.dataset.flipY = '1';
+        } else if (pattern === 'all-xy') {
+          span.dataset.flipXy = '1';
+        } else if (pattern === 'custom' && custom[i]) {
+          const mode = custom[i];
+          if (mode === 'x') span.dataset.flipX = '1';
+          if (mode === 'y') span.dataset.flipY = '1';
+          if (mode === 'xy') span.dataset.flipXy = '1';
+        }
+      });
+    }
+
+    function renderLetters(container, text, enabled, pattern, custom) {
+      container.replaceChildren();
+      if (!enabled) {
+        container.textContent = text;
+        return;
+      }
+      container.classList.add('letters');
+      const spans = splitLetters(text);
+      applyLetterPattern(spans, pattern, custom);
+      spans.forEach(s => container.appendChild(s));
+    }
+
+    function updateLetterGrid(text) {
+      const chars = [...text];
+      els.letterGrid.innerHTML = '';
+      state.letterCustom = chars.map((_, i) => state.letterCustom[i] || '');
+      chars.forEach((ch, i) => {
+        const label = document.createElement('label');
+        const select = document.createElement('select');
+        select.dataset.index = i;
+        select.innerHTML = `
+          <option value="">—</option>
+          <option value="x">X</option>
+          <option value="y">Y</option>
+          <option value="xy">XY</option>
+        `;
+        select.value = state.letterCustom[i] || '';
+        select.addEventListener('change', () => {
+          state.letterCustom[i] = select.value;
+          render();
+        });
+        label.appendChild(select);
+        label.appendChild(document.createTextNode(` ${ch === ' ' ? '␣' : ch}`));
+        els.letterGrid.appendChild(label);
+      });
+    }
+
+    function updateMixBadge() {
+      const active = [];
+      if (state.glitchAnim) active.push('keyframes');
+      if (state.btnGlitch) active.push('btn overlay');
+      if (state.modalGlitch) active.push('modal overlay');
+      if (state.letters) active.push('letters flip');
+      if (state.bgFlicker) active.push('bg flicker');
+      if (state.edgeFlicker) active.push('edge flicker');
+      els.mixBadge.innerHTML = active.length
+        ? active.map(a => `<span>${a}</span>`).join('')
+        : '<span style="opacity:0.5">No effects active</span>';
+    }
+
+    function render() {
+      const text = state.text || '[coming soon]';
+      const isCyber = state.fontStyle === 'cyber';
+      const iteration = state.infinite ? 'infinite' : '1';
+      const clipVars = buildClipVars(state.clipIntensity, state.activeClips);
+
+      els.dynamicStyles.textContent = `
+        :root {
+          --glitch-duration: ${state.duration}s;
+          --glitch-iteration: ${iteration};
+          --shimmy-distance: ${state.shimmy};
+        }
+        .glitch-host, .modal__glitch, .preview-target.is-glitch-anim {
+          ${clipVars}
+        }
+        ${buildKeyframes(state.activeClips)}
+        .flicker-backdrop.is-bg-flicker {
+          animation-duration: ${state.flickerSpeed}s;
+        }
+      `;
+
+      els.mainTarget.className = 'preview-target' + (isCyber ? ' cyber' : '');
+      els.mainTarget.classList.toggle('is-glitch-anim', state.glitchAnim);
+      els.mainHost.style.setProperty('--shimmy-distance', state.shimmy);
+
+      renderLetters(els.mainTarget, text, state.letters, state.letterPattern, state.letterCustom);
+      renderLetters(els.mainGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
+
+      els.cyberBtn.classList.toggle('btn-glitch-enabled', state.btnGlitch);
+      els.cyberBtn.classList.toggle('force-overlay', state.btnForce);
+      els.cyberBtn.style.setProperty('--shimmy-distance', state.btnShimmy);
+      const btnTextEl = els.btnGlitchLayer.querySelector('.btn-glitch-text');
+      if (btnTextEl) {
+        renderLetters(btnTextEl, 'Upgrade', state.letters, state.letterPattern, state.letterCustom);
+      }
+
+      els.modalPreview.classList.toggle('is-modal-glitch', state.modalGlitch);
+      els.modalGlitchLayer.style.setProperty('--shimmy-distance', state.modalShimmy);
+      renderLetters(els.modalGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
+      renderLetters(els.modalTitle, 'Upgrade', state.letters, state.letterPattern, state.letterCustom);
+
+      updateMixBadge();
+    }
+
+    function initClipToggles() {
+      CLIP_KEYS.forEach((key, i) => {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = true;
+        cb.dataset.clip = key;
+        cb.addEventListener('change', () => {
+          state.activeClips[key] = cb.checked;
+          render();
+        });
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(` ${i + 1}`));
+        els.clipToggles.appendChild(label);
+      });
+    }
+
+    function bindControls() {
+      els.previewText.addEventListener('input', () => {
+        state.text = els.previewText.value;
+        updateLetterGrid(state.text);
+        render();
+      });
+
+      els.fontStyle.addEventListener('change', () => {
+        state.fontStyle = els.fontStyle.value;
+        if (state.fontStyle === 'cyber' && state.text === '[coming soon]') {
+          state.text = 'UPGRADE';
+          els.previewText.value = 'UPGRADE';
+          updateLetterGrid(state.text);
+        }
+        render();
+      });
+
+      els.toggleGlitchAnim.addEventListener('change', () => {
+        state.glitchAnim = els.toggleGlitchAnim.checked;
+        render();
+      });
+
+      els.duration.addEventListener('input', () => {
+        state.duration = parseFloat(els.duration.value);
+        els.durationOut.textContent = state.duration.toFixed(1);
+        render();
+      });
+
+      els.shimmy.addEventListener('input', () => {
+        state.shimmy = parseInt(els.shimmy.value, 10);
+        els.shimmyOut.textContent = state.shimmy;
+        render();
+      });
+
+      els.toggleInfinite.addEventListener('change', () => {
+        state.infinite = els.toggleInfinite.checked;
+        render();
+      });
+
+      els.clipIntensity.addEventListener('input', () => {
+        state.clipIntensity = parseInt(els.clipIntensity.value, 10);
+        els.clipIntensityOut.textContent = state.clipIntensity;
+        render();
+      });
+
+      els.toggleBtnGlitch.addEventListener('change', () => {
+        state.btnGlitch = els.toggleBtnGlitch.checked;
+        render();
+      });
+
+      els.toggleBtnForce.addEventListener('change', () => {
+        state.btnForce = els.toggleBtnForce.checked;
+        els.cyberBtn.classList.toggle('force-overlay', state.btnForce);
+      });
+
+      els.btnShimmy.addEventListener('input', () => {
+        state.btnShimmy = parseInt(els.btnShimmy.value, 10);
+        els.btnShimmyOut.textContent = state.btnShimmy;
+        render();
+      });
+
+      els.toggleModalGlitch.addEventListener('change', () => {
+        state.modalGlitch = els.toggleModalGlitch.checked;
+        render();
+      });
+
+      els.modalShimmy.addEventListener('input', () => {
+        state.modalShimmy = parseInt(els.modalShimmy.value, 10);
+        els.modalShimmyOut.textContent = state.modalShimmy;
+        render();
+      });
+
+      els.toggleLetters.addEventListener('change', () => {
+        state.letters = els.toggleLetters.checked;
+        render();
+      });
+
+      els.letterPattern.addEventListener('change', () => {
+        state.letterPattern = els.letterPattern.value;
+        els.letterGrid.hidden = state.letterPattern !== 'custom';
+        if (state.letterPattern === 'custom') updateLetterGrid(state.text);
+        render();
+      });
+
+      els.toggleBgFlicker.addEventListener('change', () => {
+        state.bgFlicker = els.toggleBgFlicker.checked;
+        updateMixBadge();
+      });
+
+      els.toggleEdgeFlicker.addEventListener('change', () => {
+        state.edgeFlicker = els.toggleEdgeFlicker.checked;
+        updateMixBadge();
+      });
+
+      els.flickerSpeed.addEventListener('input', () => {
+        state.flickerSpeed = parseFloat(els.flickerSpeed.value);
+        els.flickerSpeedOut.textContent = state.flickerSpeed.toFixed(2);
+        render();
+      });
+
+      els.fireFlicker.addEventListener('click', fireFlicker);
+      els.replayBtn.addEventListener('click', replayAnimations);
+
+      let themeMode = 'auto';
+      els.themeToggle.addEventListener('click', () => {
+        themeMode = themeMode === 'auto' ? 'dark' : themeMode === 'dark' ? 'light' : 'auto';
+        document.documentElement.removeAttribute('data-theme');
+        if (themeMode !== 'auto') document.documentElement.dataset.theme = themeMode;
+        els.themeToggle.textContent = `Theme: ${themeMode[0].toUpperCase()}${themeMode.slice(1)}`;
+      });
+    }
+
+    function fireFlicker() {
+      if (state.bgFlicker) {
+        els.modalFlickerBg.classList.remove('is-bg-flicker');
+        void els.modalFlickerBg.offsetWidth;
+        els.modalFlickerBg.classList.add('is-bg-flicker');
+      }
+      if (state.edgeFlicker) {
+        els.modalPreview.classList.remove('is-edge-flicker');
+        void els.modalPreview.offsetWidth;
+        els.modalPreview.classList.add('is-edge-flicker');
+      }
+    }
+
+    function replayAnimations() {
+      [els.mainTarget, els.mainGlitchLayer, els.modalGlitchLayer, els.btnGlitchLayer].forEach(el => {
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = '';
+      });
+      fireFlicker();
+    }
+
+    initClipToggles();
+    bindControls();
+    updateLetterGrid(state.text);
+    render();
+  </script>
+</body>
+</html>
