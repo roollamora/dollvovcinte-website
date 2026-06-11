@@ -21,12 +21,6 @@
       --stage-text: light-dark(#1a1a1f, #f5f5f5);
       --corner: 12px;
       --border: 2px;
-      --clip-btn: polygon(
-        0 0, 100% 0,
-        100% calc(100% - var(--corner)),
-        calc(100% - var(--corner)) 100%,
-        0% 100%
-      );
       --flicker: linear(
         0 0%, 0.1864 6.17%, 0.0001 14.41%, 0.5244 20.97%,
         0.3927 37.91%, 0.8115 60.62%, 0.9416 61.92%,
@@ -41,16 +35,21 @@
       --preview-bg: light-dark(#e8e8ec, #08080a);
       --stage-opacity: 1;
       --global-blur: 0px;
+      --stage-font-family: "Special Elite", "Courier New", monospace;
+      --stage-font-size: clamp(1.35rem, 4.5vw, 2.25rem);
+      --stage-line-height: 1.2;
+      --stage-letter-spacing: 0.1em;
+      --stage-text-transform: lowercase;
       --modal-blur: 2px;
       --modal-saturate: 140%;
-      --btn-blur: 6px;
-      --btn-saturate: 180%;
+      --overlay-blur: 6px;
+      --overlay-saturate: 180%;
       --kf-duration: 2s;
       --kf-delay: 0s;
       --kf-iteration: infinite;
-      --btn-duration: 2s;
-      --btn-delay: 0s;
-      --btn-iteration: infinite;
+      --overlay-duration: 2s;
+      --overlay-delay: 0s;
+      --overlay-iteration: infinite;
       --modal-duration: 2s;
       --modal-delay: 0s;
       --modal-iteration: infinite;
@@ -61,10 +60,10 @@
       --edge-delay: 0s;
       --edge-iteration: 1;
       --kf-shimmy: 5;
-      --btn-shimmy: 5;
+      --overlay-shimmy: 5;
       --modal-shimmy: 2;
       --kf-opacity: 1;
-      --btn-opacity: 1;
+      --overlay-opacity: 1;
       --modal-opacity: 1;
       --bg-flicker-opacity: 0.65;
       --edge-opacity: 1;
@@ -190,14 +189,6 @@
       color: var(--accent);
     }
 
-    .section h2 .tag {
-      font-weight: 500;
-      letter-spacing: 0.04em;
-      text-transform: none;
-      color: var(--lab-muted);
-      font-size: 0.6875rem;
-    }
-
     .section-body { display: none; }
     .section.is-on .section-body { display: block; }
 
@@ -314,7 +305,6 @@
       align-items: center;
       gap: 0.2rem;
       font-size: 0.6875rem;
-      font-family: Cyber, monospace;
       cursor: pointer;
     }
 
@@ -355,7 +345,6 @@
       pointer-events: none;
     }
 
-    /* —— Unified Mix Card —— */
     .mix-card {
       --corner: 12px;
       --border: 2px;
@@ -367,14 +356,10 @@
       );
       position: relative;
       width: min(100%, 360px);
-      font-family: Cyber, sans-serif;
       color: var(--accent);
       opacity: var(--stage-opacity);
       filter: blur(var(--global-blur));
-      transition: color 0.15s;
     }
-
-    .mix-card:focus-within { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 4px; }
 
     .mix-edge-rail {
       position: absolute;
@@ -428,38 +413,22 @@
       margin-bottom: 0.75rem;
     }
 
-    .glitch-host {
+    /* —— Unified text stack: one font, one box, all layers aligned —— */
+    .text-stack {
       position: relative;
-      display: inline-block;
+      display: block;
       width: 100%;
+      min-height: 1.2em;
       text-align: center;
+      font-family: var(--stage-font-family);
+      font-size: var(--stage-font-size);
+      line-height: var(--stage-line-height);
+      letter-spacing: var(--stage-letter-spacing);
+      text-transform: var(--stage-text-transform);
     }
 
-    .preview-target {
-      position: relative;
-      font-family: "Special Elite", "Courier New", monospace;
-      font-size: clamp(1.35rem, 4.5vw, 2.25rem);
-      letter-spacing: 0.1em;
-      color: var(--stage-text);
-      text-transform: lowercase;
-      z-index: 2;
-    }
-
-    .preview-target.cyber {
-      font-family: Cyber, sans-serif;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--accent);
-    }
-
-    .preview-target.is-kf-glitch {
-      opacity: var(--kf-opacity);
-      animation: glitch-kf var(--kf-duration) var(--kf-iteration);
-      animation-delay: var(--kf-delay);
-    }
-
-    .glitch-host .glitch-layer,
-    .modal__glitch {
+    .text-stack .glitch-layer,
+    .text-stack .modal__glitch {
       --clip-one: polygon(0 2%, 100% 2%, 100% 95%, 95% 95%, 95% 90%, 85% 90%, 85% 95%, 8% 95%, 0 70%);
       --clip-two: polygon(0 78%, 100% 78%, 100% 100%, 95% 100%, 95% 90%, 85% 90%, 85% 100%, 8% 100%, 0 78%);
       --clip-three: polygon(0 44%, 100% 44%, 100% 54%, 95% 54%, 95% 54%, 85% 54%, 85% 54%, 8% 54%, 0 54%);
@@ -469,76 +438,85 @@
       --clip-seven: polygon(0 63%, 100% 63%, 100% 80%, 95% 80%, 95% 80%, 85% 80%, 85% 80%, 8% 80%, 0 70%);
     }
 
-    .glitch-host .glitch-layer {
-      display: none;
-      position: absolute;
-      inset: 0;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      color: var(--accent);
-      text-shadow: 0 1px var(--shadow);
+    .preview-target {
+      position: relative;
+      display: inline-block;
+      color: var(--stage-text);
       font: inherit;
       letter-spacing: inherit;
       text-transform: inherit;
-      opacity: var(--btn-opacity);
-      z-index: 4;
+      line-height: inherit;
+      z-index: 2;
     }
 
-    .glitch-host.btn-glitch-enabled.force-overlay .glitch-layer,
-    .glitch-host.btn-glitch-enabled:hover .glitch-layer,
-    .glitch-host.btn-glitch-enabled:focus-within .glitch-layer,
-    .mix-card:hover .glitch-host.btn-glitch-enabled .glitch-layer,
-    .mix-card:focus-within .glitch-host.btn-glitch-enabled .glitch-layer {
-      display: flex;
-      animation: glitch-btn var(--btn-duration) var(--btn-iteration);
-      animation-delay: var(--btn-delay);
+    .preview-target.is-kf-glitch {
+      opacity: var(--kf-opacity);
+      animation: glitch-kf var(--kf-duration) var(--kf-iteration);
+      animation-delay: var(--kf-delay);
     }
 
+    .glitch-layer,
     .modal__glitch {
       position: absolute;
       inset: 0;
-      padding: 1.25rem 1rem;
-      color: var(--shadow);
-      z-index: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
       pointer-events: none;
       font: inherit;
       letter-spacing: inherit;
       text-transform: inherit;
-      display: none;
-      opacity: var(--modal-opacity);
-      text-align: center;
-      align-content: center;
+      line-height: inherit;
+      white-space: nowrap;
     }
 
-    .mix-card.is-modal-glitch .modal__glitch {
-      display: block;
+    .overlay-layer {
+      color: var(--accent);
+      text-shadow: 0 1px var(--shadow);
+      opacity: var(--overlay-opacity);
+      z-index: 4;
+    }
+
+    .text-stack.is-overlay-glitch .overlay-layer {
+      display: flex;
+      animation: glitch-overlay var(--overlay-duration) var(--overlay-iteration);
+      animation-delay: var(--overlay-delay);
+    }
+
+    .modal__glitch {
+      color: var(--shadow);
+      z-index: 1;
+      opacity: var(--modal-opacity);
+    }
+
+    .text-stack.is-modal-glitch .modal__glitch {
+      display: flex;
       animation: glitch-modal var(--modal-duration) var(--modal-iteration);
       animation-delay: var(--modal-delay);
     }
 
-    .btn-backdrop {
+    .overlay-backdrop {
       position: absolute;
-      z-index: -1;
+      z-index: 0;
       inset: -0.35rem -0.5rem;
-      background: light-dark(
-        hsl(0 0% 100% / var(--backdrop-opacity)),
-        hsl(0 0% 0% / var(--backdrop-opacity))
-      );
-      clip-path: var(--clip-btn);
-      pointer-events: none;
-      backdrop-filter: saturate(var(--btn-saturate)) blur(var(--btn-blur));
-      transition: background 0.15s;
-    }
-
-    .glitch-host.btn-glitch-enabled:hover .btn-backdrop,
-    .glitch-host.btn-glitch-enabled:focus-within .btn-backdrop,
-    .glitch-host.btn-glitch-enabled.force-overlay .btn-backdrop,
-    .mix-card:hover .glitch-host.btn-glitch-enabled .btn-backdrop {
       background: color-mix(in srgb, var(--accent) 55%, transparent);
+      clip-path: polygon(
+        0 0, 100% 0,
+        100% calc(100% - 12px),
+        calc(100% - 12px) 100%,
+        0% 100%
+      );
+      pointer-events: none;
+      backdrop-filter: saturate(var(--overlay-saturate)) blur(var(--overlay-blur));
+      opacity: 0;
+      transition: opacity 0.15s;
     }
 
-    .letters { display: flex; justify-content: center; flex-wrap: wrap; }
+    .text-stack.is-overlay-glitch .overlay-backdrop {
+      opacity: 1;
+    }
+
+    .letters { display: inline-flex; justify-content: center; flex-wrap: wrap; }
     .letters span[data-flip-x="1"] { scale: -1 1; }
     .letters span[data-flip-y="1"] { scale: 1 -1; }
     .letters span[data-flip-xy="1"] { scale: -1 -1; }
@@ -561,20 +539,20 @@
       31%, 61%, 100% { clip-path: var(--clip-four); }
     }
 
-    @keyframes glitch-btn {
+    @keyframes glitch-overlay {
       0% { clip-path: var(--clip-one); }
-      2%, 8% { clip-path: var(--clip-two); transform: translate(calc(var(--btn-shimmy) * -1%), 0); }
-      6% { clip-path: var(--clip-two); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      2%, 8% { clip-path: var(--clip-two); transform: translate(calc(var(--overlay-shimmy) * -1%), 0); }
+      6% { clip-path: var(--clip-two); transform: translate(calc(var(--overlay-shimmy) * 1%), 0); }
       9% { clip-path: var(--clip-two); transform: translate(0, 0); }
-      10% { clip-path: var(--clip-three); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      10% { clip-path: var(--clip-three); transform: translate(calc(var(--overlay-shimmy) * 1%), 0); }
       13% { clip-path: var(--clip-three); transform: translate(0, 0); }
-      14%, 21% { clip-path: var(--clip-four); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
-      25% { clip-path: var(--clip-five); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
-      30% { clip-path: var(--clip-five); transform: translate(calc(var(--btn-shimmy) * -1%), 0); }
-      35%, 45% { clip-path: var(--clip-six); transform: translate(calc(var(--btn-shimmy) * -1%), 0); }
-      40% { clip-path: var(--clip-six); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      14%, 21% { clip-path: var(--clip-four); transform: translate(calc(var(--overlay-shimmy) * 1%), 0); }
+      25% { clip-path: var(--clip-five); transform: translate(calc(var(--overlay-shimmy) * 1%), 0); }
+      30% { clip-path: var(--clip-five); transform: translate(calc(var(--overlay-shimmy) * -1%), 0); }
+      35%, 45% { clip-path: var(--clip-six); transform: translate(calc(var(--overlay-shimmy) * -1%), 0); }
+      40% { clip-path: var(--clip-six); transform: translate(calc(var(--overlay-shimmy) * 1%), 0); }
       50% { clip-path: var(--clip-six); transform: translate(0, 0); }
-      55% { clip-path: var(--clip-seven); transform: translate(calc(var(--btn-shimmy) * 1%), 0); }
+      55% { clip-path: var(--clip-seven); transform: translate(calc(var(--overlay-shimmy) * 1%), 0); }
       60% { clip-path: var(--clip-seven); transform: translate(0, 0); }
       31%, 61%, 100% { clip-path: var(--clip-four); }
     }
@@ -650,8 +628,8 @@
 
     @media (prefers-reduced-motion: reduce) {
       .preview-target.is-kf-glitch,
-      .glitch-host .glitch-layer,
-      .modal__glitch,
+      .text-stack.is-overlay-glitch .overlay-layer,
+      .text-stack.is-modal-glitch .modal__glitch,
       .flicker-backdrop.is-bg-flicker,
       .mix-card.is-edge-flicker .mix-edge-rail {
         animation: none !important;
@@ -679,10 +657,10 @@
         <div class="section-body">
           <div class="control-row"><label for="previewText">Sample copy</label></div>
           <input type="text" id="previewText" value="[coming soon]" maxlength="32">
-          <div class="control-row" style="margin-top:0.55rem;"><label for="fontStyle">Font style</label></div>
+          <div class="control-row" style="margin-top:0.55rem;"><label for="fontStyle">Stage font</label></div>
           <select id="fontStyle">
-            <option value="mono">Special Elite — [coming soon]</option>
-            <option value="cyber">Cyber — UPGRADE</option>
+            <option value="mono">Special Elite</option>
+            <option value="cyber">Cyber</option>
           </select>
         </div>
       </div>
@@ -726,28 +704,26 @@
         </div>
       </div>
 
-      <div class="section" id="secBtn" data-effect="btn">
+      <div class="section" id="secOverlay" data-effect="overlay">
         <div class="section-head">
-          <h2>Button overlay glitch</h2>
-          <label class="toggle" title="Add to mix"><input type="checkbox" id="toggleBtn"><span></span></label>
+          <h2>Overlay glitch</h2>
+          <label class="toggle" title="Add to mix"><input type="checkbox" id="toggleOverlay"><span></span></label>
         </div>
         <div class="section-body">
-          <div class="control-row"><label for="btnForce">Force overlay visible</label><label class="toggle"><input type="checkbox" id="btnForce"><span></span></label></div>
-          <div class="control-row"><label for="btnDuration">Duration <output id="btnDurationOut">2.0</output>s</label></div>
-          <input type="range" id="btnDuration" min="0.2" max="8" step="0.1" value="2">
-          <div class="control-row"><label for="btnDelay">Delay <output id="btnDelayOut">0.0</output>s</label></div>
-          <input type="range" id="btnDelay" min="0" max="4" step="0.05" value="0">
-          <div class="control-row"><label for="btnInfinite">Loop infinitely</label><label class="toggle"><input type="checkbox" id="btnInfinite" checked><span></span></label></div>
-          <div class="iter-row" id="btnIterRow" hidden><label for="btnIterCount">Iterations</label><input type="number" id="btnIterCount" min="1" max="99" value="3"></div>
-          <div class="control-row"><label for="btnShimmy">Shimmy <output id="btnShimmyOut">5</output>%</label></div>
-          <input type="range" id="btnShimmy" min="0" max="25" step="1" value="5">
-          <div class="control-row"><label for="btnOpacity">Overlay opacity <output id="btnOpacityOut">100</output>%</label></div>
-          <input type="range" id="btnOpacity" min="10" max="100" step="1" value="100">
-          <div class="control-row"><label for="btnBlur">Backdrop blur <output id="btnBlurOut">6</output>px</label></div>
-          <input type="range" id="btnBlur" min="0" max="16" step="1" value="6">
-          <div class="control-row"><label for="btnSaturate">Backdrop saturate <output id="btnSaturateOut">180</output>%</label></div>
-          <input type="range" id="btnSaturate" min="50" max="250" step="5" value="180">
-          <p class="hint">Hover or focus the mix card — or force overlay</p>
+          <div class="control-row"><label for="overlayDuration">Duration <output id="overlayDurationOut">2.0</output>s</label></div>
+          <input type="range" id="overlayDuration" min="0.2" max="8" step="0.1" value="2">
+          <div class="control-row"><label for="overlayDelay">Delay <output id="overlayDelayOut">0.0</output>s</label></div>
+          <input type="range" id="overlayDelay" min="0" max="4" step="0.05" value="0">
+          <div class="control-row"><label for="overlayInfinite">Loop infinitely</label><label class="toggle"><input type="checkbox" id="overlayInfinite" checked><span></span></label></div>
+          <div class="iter-row" id="overlayIterRow" hidden><label for="overlayIterCount">Iterations</label><input type="number" id="overlayIterCount" min="1" max="99" value="3"></div>
+          <div class="control-row"><label for="overlayShimmy">Shimmy <output id="overlayShimmyOut">5</output>%</label></div>
+          <input type="range" id="overlayShimmy" min="0" max="25" step="1" value="5">
+          <div class="control-row"><label for="overlayOpacity">Overlay opacity <output id="overlayOpacityOut">100</output>%</label></div>
+          <input type="range" id="overlayOpacity" min="10" max="100" step="1" value="100">
+          <div class="control-row"><label for="overlayBlur">Backdrop blur <output id="overlayBlurOut">6</output>px</label></div>
+          <input type="range" id="overlayBlur" min="0" max="16" step="1" value="6">
+          <div class="control-row"><label for="overlaySaturate">Backdrop saturate <output id="overlaySaturateOut">180</output>%</label></div>
+          <input type="range" id="overlaySaturate" min="50" max="250" step="5" value="180">
         </div>
       </div>
 
@@ -832,22 +808,22 @@
     <main class="preview-panel">
       <div class="preview-label">Mix Lab — all layers on one card</div>
       <div class="preview-stage" id="mainStage">
-        <div class="mix-card" id="mixCard" tabindex="0">
+        <div class="mix-card" id="mixCard">
           <div class="mix-edge-rail" aria-hidden="true"></div>
           <div class="flicker-backdrop" id="mixFlickerBg" aria-hidden="true"></div>
-          <div class="modal__glitch letters" id="modalGlitchLayer" aria-hidden="true"></div>
           <div class="mix-body">
             <div class="mix-kicker">DVCT · system</div>
-            <div class="glitch-host" id="mainHost">
-              <span class="btn-backdrop" aria-hidden="true"></span>
+            <div class="text-stack" id="textStack">
+              <span class="overlay-backdrop" aria-hidden="true"></span>
+              <div class="modal__glitch letters" id="modalGlitchLayer" aria-hidden="true"></div>
               <div class="preview-target" id="mainTarget">[coming soon]</div>
-              <div class="glitch-layer letters" id="btnGlitchLayer" aria-hidden="true"></div>
+              <div class="glitch-layer overlay-layer letters" id="overlayGlitchLayer" aria-hidden="true"></div>
             </div>
           </div>
         </div>
       </div>
       <div class="mix-badge" id="mixBadge"></div>
-      <p class="hint" style="max-width:560px; text-align:center;">Hover the card for button overlay · Tab to focus · Toggle effects in the sidebar</p>
+      <p class="hint" style="max-width:560px; text-align:center;">Toggle effects in the sidebar — all layers share one text stack</p>
     </main>
   </div>
 
@@ -866,6 +842,19 @@
 
     const CLIP_KEYS = ['one','two','three','four','five','six','seven'];
 
+    const FONT_PRESETS = {
+      mono: {
+        family: '"Special Elite", "Courier New", monospace',
+        transform: 'lowercase',
+        spacing: '0.1em',
+      },
+      cyber: {
+        family: 'Cyber, sans-serif',
+        transform: 'uppercase',
+        spacing: '0.06em',
+      },
+    };
+
     const state = {
       text: '[coming soon]',
       fontStyle: 'mono',
@@ -878,8 +867,8 @@
       globalBlur: 0,
       kf: false, kfDuration: 2, kfDelay: 0, kfInfinite: true, kfIter: 3, kfShimmy: 5, kfOpacity: 100,
       clipIntensity: 100, activeClips: Object.fromEntries(CLIP_KEYS.map(k => [k, true])),
-      btn: false, btnForce: false, btnDuration: 2, btnDelay: 0, btnInfinite: true, btnIter: 3,
-      btnShimmy: 5, btnOpacity: 100, btnBlur: 6, btnSaturate: 180,
+      overlay: false, overlayDuration: 2, overlayDelay: 0, overlayInfinite: true, overlayIter: 3,
+      overlayShimmy: 5, overlayOpacity: 100, overlayBlur: 6, overlaySaturate: 180,
       modal: false, modalDuration: 2, modalDelay: 0, modalInfinite: true, modalIter: 3,
       modalShimmy: 2, modalOpacity: 100, modalBlur: 2, modalSaturate: 140,
       letters: false, letterPattern: 'default', letterCustom: [],
@@ -915,23 +904,22 @@
       clipIntensity: document.getElementById('clipIntensity'),
       clipIntensityOut: document.getElementById('clipIntensityOut'),
       clipToggles: document.getElementById('clipToggles'),
-      toggleBtn: document.getElementById('toggleBtn'),
-      btnForce: document.getElementById('btnForce'),
-      btnDuration: document.getElementById('btnDuration'),
-      btnDurationOut: document.getElementById('btnDurationOut'),
-      btnDelay: document.getElementById('btnDelay'),
-      btnDelayOut: document.getElementById('btnDelayOut'),
-      btnInfinite: document.getElementById('btnInfinite'),
-      btnIterRow: document.getElementById('btnIterRow'),
-      btnIterCount: document.getElementById('btnIterCount'),
-      btnShimmy: document.getElementById('btnShimmy'),
-      btnShimmyOut: document.getElementById('btnShimmyOut'),
-      btnOpacity: document.getElementById('btnOpacity'),
-      btnOpacityOut: document.getElementById('btnOpacityOut'),
-      btnBlur: document.getElementById('btnBlur'),
-      btnBlurOut: document.getElementById('btnBlurOut'),
-      btnSaturate: document.getElementById('btnSaturate'),
-      btnSaturateOut: document.getElementById('btnSaturateOut'),
+      toggleOverlay: document.getElementById('toggleOverlay'),
+      overlayDuration: document.getElementById('overlayDuration'),
+      overlayDurationOut: document.getElementById('overlayDurationOut'),
+      overlayDelay: document.getElementById('overlayDelay'),
+      overlayDelayOut: document.getElementById('overlayDelayOut'),
+      overlayInfinite: document.getElementById('overlayInfinite'),
+      overlayIterRow: document.getElementById('overlayIterRow'),
+      overlayIterCount: document.getElementById('overlayIterCount'),
+      overlayShimmy: document.getElementById('overlayShimmy'),
+      overlayShimmyOut: document.getElementById('overlayShimmyOut'),
+      overlayOpacity: document.getElementById('overlayOpacity'),
+      overlayOpacityOut: document.getElementById('overlayOpacityOut'),
+      overlayBlur: document.getElementById('overlayBlur'),
+      overlayBlurOut: document.getElementById('overlayBlurOut'),
+      overlaySaturate: document.getElementById('overlaySaturate'),
+      overlaySaturateOut: document.getElementById('overlaySaturateOut'),
       toggleModal: document.getElementById('toggleModal'),
       modalDuration: document.getElementById('modalDuration'),
       modalDurationOut: document.getElementById('modalDurationOut'),
@@ -974,13 +962,12 @@
       edgeOpacityOut: document.getElementById('edgeOpacityOut'),
       fireEdge: document.getElementById('fireEdge'),
       mainTarget: document.getElementById('mainTarget'),
-      btnGlitchLayer: document.getElementById('btnGlitchLayer'),
-      mainHost: document.getElementById('mainHost'),
+      overlayGlitchLayer: document.getElementById('overlayGlitchLayer'),
+      textStack: document.getElementById('textStack'),
       mixCard: document.getElementById('mixCard'),
       modalGlitchLayer: document.getElementById('modalGlitchLayer'),
       mixFlickerBg: document.getElementById('mixFlickerBg'),
       mixBadge: document.getElementById('mixBadge'),
-      mainStage: document.getElementById('mainStage'),
       dynamicStyles: document.getElementById('dynamicStyles'),
       themeToggle: document.getElementById('themeToggle'),
       replayBtn: document.getElementById('replayBtn'),
@@ -988,7 +975,7 @@
 
     const effectSections = {
       kf: document.getElementById('secKf'),
-      btn: document.getElementById('secBtn'),
+      overlay: document.getElementById('secOverlay'),
       modal: document.getElementById('secModal'),
       letters: document.getElementById('secLetters'),
       bg: document.getElementById('secBg'),
@@ -1112,14 +1099,21 @@
     }
 
     function syncSectionUI() {
-      const map = { kf: state.kf, btn: state.btn, modal: state.modal, letters: state.letters, bg: state.bg, edge: state.edge };
+      const map = {
+        kf: state.kf,
+        overlay: state.overlay,
+        modal: state.modal,
+        letters: state.letters,
+        bg: state.bg,
+        edge: state.edge,
+      };
       Object.entries(map).forEach(([key, on]) => {
         const sec = effectSections[key];
         sec.classList.toggle('is-on', on);
         sec.classList.toggle('is-off', !on);
       });
       els.kfIterRow.hidden = state.kfInfinite;
-      els.btnIterRow.hidden = state.btnInfinite;
+      els.overlayIterRow.hidden = state.overlayInfinite;
       els.modalIterRow.hidden = state.modalInfinite;
       els.bgIterRow.hidden = state.bgInfinite;
       els.edgeIterRow.hidden = state.edgeInfinite;
@@ -1128,7 +1122,7 @@
     function updateMixBadge() {
       const active = [];
       if (state.kf) active.push('keyframes');
-      if (state.btn) active.push('btn overlay');
+      if (state.overlay) active.push('overlay');
       if (state.modal) active.push('modal layer');
       if (state.letters) active.push('letters flip');
       if (state.bg) active.push('bg flicker');
@@ -1140,7 +1134,7 @@
 
     function render() {
       const text = state.text || '[coming soon]';
-      const isCyber = state.fontStyle === 'cyber';
+      const font = FONT_PRESETS[state.fontStyle] || FONT_PRESETS.mono;
       const clipVars = buildClipVars(state.clipIntensity, state.activeClips);
       const backdropAlpha = state.backdropOpacity / 100;
 
@@ -1153,18 +1147,21 @@
           --stage-opacity: ${state.stageOpacity / 100};
           --backdrop-opacity: ${backdropAlpha};
           --global-blur: ${state.globalBlur}px;
+          --stage-font-family: ${font.family};
+          --stage-letter-spacing: ${font.spacing};
+          --stage-text-transform: ${font.transform};
           --kf-duration: ${state.kfDuration}s;
           --kf-delay: ${state.kfDelay}s;
           --kf-iteration: ${iterValue(state.kfInfinite, state.kfIter)};
           --kf-shimmy: ${state.kfShimmy};
           --kf-opacity: ${state.kfOpacity / 100};
-          --btn-duration: ${state.btnDuration}s;
-          --btn-delay: ${state.btnDelay}s;
-          --btn-iteration: ${iterValue(state.btnInfinite, state.btnIter)};
-          --btn-shimmy: ${state.btnShimmy};
-          --btn-opacity: ${state.btnOpacity / 100};
-          --btn-blur: ${state.btnBlur}px;
-          --btn-saturate: ${state.btnSaturate}%;
+          --overlay-duration: ${state.overlayDuration}s;
+          --overlay-delay: ${state.overlayDelay}s;
+          --overlay-iteration: ${iterValue(state.overlayInfinite, state.overlayIter)};
+          --overlay-shimmy: ${state.overlayShimmy};
+          --overlay-opacity: ${state.overlayOpacity / 100};
+          --overlay-blur: ${state.overlayBlur}px;
+          --overlay-saturate: ${state.overlaySaturate}%;
           --modal-duration: ${state.modalDuration}s;
           --modal-delay: ${state.modalDelay}s;
           --modal-iteration: ${iterValue(state.modalInfinite, state.modalIter)};
@@ -1181,22 +1178,21 @@
           --edge-iteration: ${iterValue(state.edgeInfinite, state.edgeIter)};
           --edge-opacity: ${state.edgeOpacity / 100};
         }
-        .glitch-host, .modal__glitch, .preview-target.is-kf-glitch { ${clipVars} }
+        .text-stack, .preview-target.is-kf-glitch { ${clipVars} }
         ${buildGlitchKeyframes('glitch-kf', state.activeClips, 'var(--kf-shimmy)')}
-        ${buildGlitchKeyframes('glitch-btn', state.activeClips, 'var(--btn-shimmy)')}
+        ${buildGlitchKeyframes('glitch-overlay', state.activeClips, 'var(--overlay-shimmy)')}
         ${buildGlitchKeyframes('glitch-modal', state.activeClips, 'var(--modal-shimmy)')}
       `;
 
-      els.mainTarget.className = 'preview-target' + (isCyber ? ' cyber' : '');
+      els.mainTarget.className = 'preview-target';
       els.mainTarget.classList.toggle('is-kf-glitch', state.kf);
 
       renderLetters(els.mainTarget, text, state.letters, state.letterPattern, state.letterCustom);
-      renderLetters(els.btnGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
+      renderLetters(els.overlayGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
       renderLetters(els.modalGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
 
-      els.mainHost.classList.toggle('btn-glitch-enabled', state.btn);
-      els.mainHost.classList.toggle('force-overlay', state.btnForce);
-      els.mixCard.classList.toggle('is-modal-glitch', state.modal);
+      els.textStack.classList.toggle('is-overlay-glitch', state.overlay);
+      els.textStack.classList.toggle('is-modal-glitch', state.modal);
 
       if (state.bg && state.bgInfinite) {
         els.mixFlickerBg.classList.add('is-bg-flicker');
@@ -1272,7 +1268,7 @@
     }
 
     function replayAnimations() {
-      [els.mainTarget, els.btnGlitchLayer, els.modalGlitchLayer].forEach(el => {
+      [els.mainTarget, els.overlayGlitchLayer, els.modalGlitchLayer].forEach(el => {
         el.style.animation = 'none';
         void el.offsetWidth;
         el.style.animation = '';
@@ -1290,11 +1286,6 @@
 
       els.fontStyle.addEventListener('change', () => {
         state.fontStyle = els.fontStyle.value;
-        if (state.fontStyle === 'cyber' && state.text === '[coming soon]') {
-          state.text = 'UPGRADE';
-          els.previewText.value = 'UPGRADE';
-          updateLetterGrid(state.text);
-        }
         render();
       });
 
@@ -1318,15 +1309,14 @@
       bindRange(els.clipIntensity, els.clipIntensityOut, 'clipIntensity', v => Math.round(v));
       bindIterToggles(els.kfInfinite, els.kfIterRow, 'kfInfinite', 'kfIter', els.kfIterCount);
 
-      bindToggle(els.toggleBtn, 'btn');
-      bindToggle(els.btnForce, 'btnForce');
-      bindRange(els.btnDuration, els.btnDurationOut, 'btnDuration', v => v.toFixed(1));
-      bindRange(els.btnDelay, els.btnDelayOut, 'btnDelay', v => v.toFixed(2));
-      bindRange(els.btnShimmy, els.btnShimmyOut, 'btnShimmy', v => Math.round(v));
-      bindRange(els.btnOpacity, els.btnOpacityOut, 'btnOpacity', v => Math.round(v));
-      bindRange(els.btnBlur, els.btnBlurOut, 'btnBlur', v => Math.round(v));
-      bindRange(els.btnSaturate, els.btnSaturateOut, 'btnSaturate', v => Math.round(v));
-      bindIterToggles(els.btnInfinite, els.btnIterRow, 'btnInfinite', 'btnIter', els.btnIterCount);
+      bindToggle(els.toggleOverlay, 'overlay');
+      bindRange(els.overlayDuration, els.overlayDurationOut, 'overlayDuration', v => v.toFixed(1));
+      bindRange(els.overlayDelay, els.overlayDelayOut, 'overlayDelay', v => v.toFixed(2));
+      bindRange(els.overlayShimmy, els.overlayShimmyOut, 'overlayShimmy', v => Math.round(v));
+      bindRange(els.overlayOpacity, els.overlayOpacityOut, 'overlayOpacity', v => Math.round(v));
+      bindRange(els.overlayBlur, els.overlayBlurOut, 'overlayBlur', v => Math.round(v));
+      bindRange(els.overlaySaturate, els.overlaySaturateOut, 'overlaySaturate', v => Math.round(v));
+      bindIterToggles(els.overlayInfinite, els.overlayIterRow, 'overlayInfinite', 'overlayIter', els.overlayIterCount);
 
       bindToggle(els.toggleModal, 'modal');
       bindRange(els.modalDuration, els.modalDurationOut, 'modalDuration', v => v.toFixed(1));
