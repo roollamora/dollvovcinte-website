@@ -52,6 +52,8 @@
       --glitch-duration: 2s;
       --glitch-iteration: infinite;
       --clip-intensity: 1;
+      --modal-blur: 2px;
+      --modal-saturate: 140%;
     }
 
     [data-theme="light"] { color-scheme: light only; }
@@ -550,7 +552,7 @@
 
     .modal-preview .modal__body {
       position: relative;
-      backdrop-filter: saturate(180%) blur(6px);
+      backdrop-filter: saturate(var(--modal-saturate)) blur(var(--modal-blur));
       clip-path: inset(0 -100% 0 0);
       border: var(--border) solid var(--accent);
       padding: 1rem;
@@ -585,7 +587,7 @@
       inset: 0;
       z-index: -1;
       clip-path: var(--clip);
-      background: light-dark(hsl(0 0% 100% / 0.4), hsl(0 0% 0% / 0.4));
+      background: light-dark(hsl(0 0% 100% / 0.35), hsl(0 0% 0% / 0.35));
     }
 
     .flicker-backdrop.is-bg-flicker {
@@ -715,6 +717,10 @@
           <label for="modalShimmy">Modal shimmy <output id="modalShimmyOut">2</output>%</label>
         </div>
         <input type="range" id="modalShimmy" min="0" max="20" step="1" value="2">
+        <div class="control-row">
+          <label for="modalBlur">Backdrop blur <output id="modalBlurOut">2</output>px</label>
+        </div>
+        <input type="range" id="modalBlur" min="0" max="12" step="1" value="2">
       </div>
 
       <div class="section">
@@ -833,6 +839,7 @@
       btnShimmy: 5,
       modalGlitch: false,
       modalShimmy: 2,
+      modalBlur: 2,
       letters: false,
       letterPattern: 'default',
       letterCustom: [],
@@ -860,6 +867,8 @@
       toggleModalGlitch: document.getElementById('toggleModalGlitch'),
       modalShimmy: document.getElementById('modalShimmy'),
       modalShimmyOut: document.getElementById('modalShimmyOut'),
+      modalBlur: document.getElementById('modalBlur'),
+      modalBlurOut: document.getElementById('modalBlurOut'),
       toggleLetters: document.getElementById('toggleLetters'),
       letterPattern: document.getElementById('letterPattern'),
       letterGrid: document.getElementById('letterGrid'),
@@ -1092,6 +1101,7 @@
       }
 
       els.modalPreview.classList.toggle('is-modal-glitch', state.modalGlitch);
+      els.modalPreview.style.setProperty('--modal-blur', `${state.modalBlur}px`);
       els.modalGlitchLayer.style.setProperty('--shimmy-distance', state.modalShimmy);
       renderLetters(els.modalGlitchLayer, text, state.letters, state.letterPattern, state.letterCustom);
       renderLetters(els.modalTitle, 'Upgrade', state.letters, state.letterPattern, state.letterCustom);
@@ -1185,6 +1195,12 @@
       els.modalShimmy.addEventListener('input', () => {
         state.modalShimmy = parseInt(els.modalShimmy.value, 10);
         els.modalShimmyOut.textContent = state.modalShimmy;
+        render();
+      });
+
+      els.modalBlur.addEventListener('input', () => {
+        state.modalBlur = parseInt(els.modalBlur.value, 10);
+        els.modalBlurOut.textContent = state.modalBlur;
         render();
       });
 
