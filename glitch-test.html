@@ -626,6 +626,71 @@
 
     .iter-row input[type="number"] { width: 4rem; }
 
+    .preset-section { margin-top: 0.5rem; }
+
+    .preset-section textarea {
+      width: 100%;
+      min-height: 5.5rem;
+      resize: vertical;
+      padding: 0.5rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid var(--lab-border);
+      background: var(--lab-bg);
+      color: var(--lab-text);
+      font: inherit;
+      font-size: 0.75rem;
+      font-family: ui-monospace, "Cascadia Code", monospace;
+      line-height: 1.4;
+    }
+
+    .preset-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .preset-actions .btn-ghost { flex: 1; min-width: 7rem; }
+
+    .preset-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.35rem;
+      font-size: 0.6875rem;
+      color: var(--lab-muted);
+    }
+
+    .preset-error {
+      margin-top: 0.35rem;
+      font-size: 0.6875rem;
+      color: hsl(10 80% 55%);
+    }
+
+    .preset-toast {
+      position: fixed;
+      bottom: 1.25rem;
+      left: 50%;
+      translate: -50% 0;
+      z-index: 200;
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      background: var(--lab-surface);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 0.8125rem;
+      box-shadow: 0 8px 24px hsl(0 0% 0% / 0.25);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, translate 0.2s;
+    }
+
+    .preset-toast.is-visible {
+      opacity: 1;
+      translate: -50% -4px;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .preview-target.is-kf-glitch,
       .text-stack.is-overlay-glitch .overlay-layer,
@@ -803,6 +868,21 @@
           <button type="button" class="btn-ghost" id="fireEdge" style="width:100%; margin-top:0.35rem;">Fire edge flicker</button>
         </div>
       </div>
+
+      <div class="section preset-section is-on">
+        <div class="section-head"><h2>AI preset</h2></div>
+        <div class="section-body">
+          <p class="hint" style="margin-top:0;">Paste this in Cursor to apply these settings to another text.</p>
+          <button type="button" class="btn-ghost" id="copyPresetBtn" style="width:100%; margin-top:0.5rem;">Copy preset for AI</button>
+          <div class="control-row" style="margin-top:0.75rem;"><label for="presetPaste">Paste preset</label></div>
+          <textarea id="presetPaste" placeholder="Paste a previously exported GLITCH_PRESET block here…" spellcheck="false"></textarea>
+          <div class="preset-meta">
+            <span id="presetCharCount">0 characters</span>
+            <button type="button" class="btn-ghost" id="applyPresetBtn">Apply preset</button>
+          </div>
+          <p class="preset-error" id="presetError" hidden></p>
+        </div>
+      </div>
     </aside>
 
     <main class="preview-panel">
@@ -828,6 +908,7 @@
   </div>
 
   <style id="dynamicStyles"></style>
+  <div class="preset-toast" id="presetToast" role="status" aria-live="polite">Preset copied to clipboard</div>
 
   <script>
     const BASE_CLIPS = {
@@ -841,6 +922,8 @@
     };
 
     const CLIP_KEYS = ['one','two','three','four','five','six','seven'];
+    const PRESET_VERSION = 1;
+    const PRESET_MARKER = 'GLITCH_PRESET';
 
     const FONT_PRESETS = {
       mono: {
@@ -874,6 +957,7 @@
       letters: false, letterPattern: 'default', letterCustom: [],
       bg: false, bgDuration: 0.25, bgDelay: 0, bgInfinite: false, bgIter: 1, bgFlickerOpacity: 65,
       edge: false, edgeDuration: 0.625, edgeDelay: 0, edgeInfinite: false, edgeIter: 1, edgeOpacity: 100,
+      themeMode: 'auto',
     };
 
     const els = {
@@ -971,6 +1055,12 @@
       dynamicStyles: document.getElementById('dynamicStyles'),
       themeToggle: document.getElementById('themeToggle'),
       replayBtn: document.getElementById('replayBtn'),
+      copyPresetBtn: document.getElementById('copyPresetBtn'),
+      presetPaste: document.getElementById('presetPaste'),
+      applyPresetBtn: document.getElementById('applyPresetBtn'),
+      presetCharCount: document.getElementById('presetCharCount'),
+      presetError: document.getElementById('presetError'),
+      presetToast: document.getElementById('presetToast'),
     };
 
     const effectSections = {
@@ -1277,6 +1367,356 @@
       fireEdgeFlicker();
     }
 
+    function collectPresetData() {
+      return {
+        version: PRESET_VERSION,
+        source: 'glitch-test.html',
+        exportedAt: new Date().toISOString(),
+        settings: {
+          text: state.text,
+          fontStyle: state.fontStyle,
+          themeMode: state.themeMode,
+          accent: state.accent,
+          shadow: state.shadow,
+          stageText: state.stageText,
+          stageBg: state.stageBg,
+          stageOpacity: state.stageOpacity,
+          backdropOpacity: state.backdropOpacity,
+          globalBlur: state.globalBlur,
+          effects: {
+            kf: state.kf,
+            overlay: state.overlay,
+            modal: state.modal,
+            letters: state.letters,
+            bg: state.bg,
+            edge: state.edge,
+          },
+          kf: {
+            duration: state.kfDuration,
+            delay: state.kfDelay,
+            infinite: state.kfInfinite,
+            iterations: state.kfIter,
+            shimmy: state.kfShimmy,
+            opacity: state.kfOpacity,
+            clipIntensity: state.clipIntensity,
+            activeClips: { ...state.activeClips },
+          },
+          overlay: {
+            duration: state.overlayDuration,
+            delay: state.overlayDelay,
+            infinite: state.overlayInfinite,
+            iterations: state.overlayIter,
+            shimmy: state.overlayShimmy,
+            opacity: state.overlayOpacity,
+            blur: state.overlayBlur,
+            saturate: state.overlaySaturate,
+          },
+          modal: {
+            duration: state.modalDuration,
+            delay: state.modalDelay,
+            infinite: state.modalInfinite,
+            iterations: state.modalIter,
+            shimmy: state.modalShimmy,
+            opacity: state.modalOpacity,
+            blur: state.modalBlur,
+            saturate: state.modalSaturate,
+          },
+          letters: {
+            pattern: state.letterPattern,
+            custom: [...state.letterCustom],
+          },
+          bg: {
+            duration: state.bgDuration,
+            delay: state.bgDelay,
+            infinite: state.bgInfinite,
+            iterations: state.bgIter,
+            flickerOpacity: state.bgFlickerOpacity,
+          },
+          edge: {
+            duration: state.edgeDuration,
+            delay: state.edgeDelay,
+            infinite: state.edgeInfinite,
+            iterations: state.edgeIter,
+            opacity: state.edgeOpacity,
+          },
+        },
+      };
+    }
+
+    function formatPresetExport(data) {
+      const json = JSON.stringify(data, null, 2);
+      return [
+        `/* ${PRESET_MARKER} v${PRESET_VERSION} — DVCT Glitch Mix Lab */`,
+        'Apply these glitch mix settings to my chosen text (keep the text I specify; copy all effect toggles, timings, colors, clip phases, letter flips, and appearance values).',
+        'Paste this in Cursor to apply these settings to another text.',
+        '',
+        json,
+      ].join('\n');
+    }
+
+    function extractPresetJson(raw) {
+      const trimmed = raw.trim();
+      if (!trimmed) throw new Error('Preset is empty.');
+
+      const markerMatch = trimmed.match(/\/\*\s*GLITCH_PRESET\b[^*]*\*\//i);
+      const body = markerMatch ? trimmed.slice(markerMatch.index + markerMatch[0].length).trim() : trimmed;
+
+      const fenceMatch = body.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      const candidate = fenceMatch ? fenceMatch[1].trim() : body;
+
+      const start = candidate.indexOf('{');
+      const end = candidate.lastIndexOf('}');
+      if (start === -1 || end === -1 || end <= start) {
+        throw new Error('No JSON object found in preset.');
+      }
+
+      return JSON.parse(candidate.slice(start, end + 1));
+    }
+
+    function normalizePresetPayload(parsed) {
+      const settings = parsed.settings || parsed;
+      if (!settings || typeof settings !== 'object') {
+        throw new Error('Preset is missing a settings object.');
+      }
+
+      const version = parsed.version ?? settings.version ?? 1;
+      if (version > PRESET_VERSION) {
+        throw new Error(`Preset version ${version} is newer than this page supports (v${PRESET_VERSION}).`);
+      }
+
+      return { version, settings };
+    }
+
+    function applyThemeMode(mode) {
+      const themeMode = ['auto', 'dark', 'light'].includes(mode) ? mode : 'auto';
+      state.themeMode = themeMode;
+      document.documentElement.removeAttribute('data-theme');
+      if (themeMode !== 'auto') document.documentElement.dataset.theme = themeMode;
+      els.themeToggle.textContent = `Theme: ${themeMode[0].toUpperCase()}${themeMode.slice(1)}`;
+    }
+
+    function syncControlsFromState() {
+      els.previewText.value = state.text;
+      els.fontStyle.value = state.fontStyle;
+      els.accentColor.value = state.accent;
+      els.shadowColor.value = state.shadow;
+      els.textColor.value = state.stageText;
+      els.stageBg.value = state.stageBg;
+
+      els.stageOpacity.value = state.stageOpacity;
+      els.stageOpacityOut.textContent = Math.round(state.stageOpacity);
+      els.backdropOpacity.value = state.backdropOpacity;
+      els.backdropOpacityOut.textContent = Math.round(state.backdropOpacity);
+      els.globalBlur.value = state.globalBlur;
+      els.globalBlurOut.textContent = Math.round(state.globalBlur);
+
+      els.toggleKf.checked = state.kf;
+      els.kfDuration.value = state.kfDuration;
+      els.kfDurationOut.textContent = state.kfDuration.toFixed(1);
+      els.kfDelay.value = state.kfDelay;
+      els.kfDelayOut.textContent = state.kfDelay.toFixed(2);
+      els.kfInfinite.checked = state.kfInfinite;
+      els.kfIterCount.value = state.kfIter;
+      els.kfShimmy.value = state.kfShimmy;
+      els.kfShimmyOut.textContent = Math.round(state.kfShimmy);
+      els.kfOpacity.value = state.kfOpacity;
+      els.kfOpacityOut.textContent = Math.round(state.kfOpacity);
+      els.clipIntensity.value = state.clipIntensity;
+      els.clipIntensityOut.textContent = Math.round(state.clipIntensity);
+      els.clipToggles.querySelectorAll('input[type="checkbox"]').forEach((cb, i) => {
+        const key = CLIP_KEYS[i];
+        if (key) {
+          cb.checked = !!state.activeClips[key];
+        }
+      });
+
+      els.toggleOverlay.checked = state.overlay;
+      els.overlayDuration.value = state.overlayDuration;
+      els.overlayDurationOut.textContent = state.overlayDuration.toFixed(1);
+      els.overlayDelay.value = state.overlayDelay;
+      els.overlayDelayOut.textContent = state.overlayDelay.toFixed(2);
+      els.overlayInfinite.checked = state.overlayInfinite;
+      els.overlayIterCount.value = state.overlayIter;
+      els.overlayShimmy.value = state.overlayShimmy;
+      els.overlayShimmyOut.textContent = Math.round(state.overlayShimmy);
+      els.overlayOpacity.value = state.overlayOpacity;
+      els.overlayOpacityOut.textContent = Math.round(state.overlayOpacity);
+      els.overlayBlur.value = state.overlayBlur;
+      els.overlayBlurOut.textContent = Math.round(state.overlayBlur);
+      els.overlaySaturate.value = state.overlaySaturate;
+      els.overlaySaturateOut.textContent = Math.round(state.overlaySaturate);
+
+      els.toggleModal.checked = state.modal;
+      els.modalDuration.value = state.modalDuration;
+      els.modalDurationOut.textContent = state.modalDuration.toFixed(1);
+      els.modalDelay.value = state.modalDelay;
+      els.modalDelayOut.textContent = state.modalDelay.toFixed(2);
+      els.modalInfinite.checked = state.modalInfinite;
+      els.modalIterCount.value = state.modalIter;
+      els.modalShimmy.value = state.modalShimmy;
+      els.modalShimmyOut.textContent = Math.round(state.modalShimmy);
+      els.modalOpacity.value = state.modalOpacity;
+      els.modalOpacityOut.textContent = Math.round(state.modalOpacity);
+      els.modalBlur.value = state.modalBlur;
+      els.modalBlurOut.textContent = Math.round(state.modalBlur);
+      els.modalSaturate.value = state.modalSaturate;
+      els.modalSaturateOut.textContent = Math.round(state.modalSaturate);
+
+      els.toggleLetters.checked = state.letters;
+      els.letterPattern.value = state.letterPattern;
+      els.letterGrid.hidden = state.letterPattern !== 'custom';
+
+      els.toggleBg.checked = state.bg;
+      els.bgDuration.value = state.bgDuration;
+      els.bgDurationOut.textContent = state.bgDuration.toFixed(2);
+      els.bgDelay.value = state.bgDelay;
+      els.bgDelayOut.textContent = state.bgDelay.toFixed(2);
+      els.bgInfinite.checked = state.bgInfinite;
+      els.bgIterCount.value = state.bgIter;
+      els.bgFlickerOpacity.value = state.bgFlickerOpacity;
+      els.bgFlickerOpacityOut.textContent = Math.round(state.bgFlickerOpacity);
+
+      els.toggleEdge.checked = state.edge;
+      els.edgeDuration.value = state.edgeDuration;
+      els.edgeDurationOut.textContent = state.edgeDuration.toFixed(2);
+      els.edgeDelay.value = state.edgeDelay;
+      els.edgeDelayOut.textContent = state.edgeDelay.toFixed(2);
+      els.edgeInfinite.checked = state.edgeInfinite;
+      els.edgeIterCount.value = state.edgeIter;
+      els.edgeOpacity.value = state.edgeOpacity;
+      els.edgeOpacityOut.textContent = Math.round(state.edgeOpacity);
+
+      applyThemeMode(state.themeMode);
+      updateLetterGrid(state.text);
+    }
+
+    function applyPresetFromObject(parsed) {
+      const { settings } = normalizePresetPayload(parsed);
+      const effects = settings.effects || {};
+
+      state.text = typeof settings.text === 'string' ? settings.text : state.text;
+      state.fontStyle = settings.fontStyle === 'cyber' ? 'cyber' : 'mono';
+      state.themeMode = settings.themeMode || 'auto';
+
+      state.accent = settings.accent || state.accent;
+      state.shadow = settings.shadow || state.shadow;
+      state.stageText = settings.stageText || state.stageText;
+      state.stageBg = settings.stageBg || state.stageBg;
+      state.stageOpacity = Number(settings.stageOpacity ?? state.stageOpacity);
+      state.backdropOpacity = Number(settings.backdropOpacity ?? state.backdropOpacity);
+      state.globalBlur = Number(settings.globalBlur ?? state.globalBlur);
+
+      state.kf = !!effects.kf;
+      state.overlay = !!effects.overlay;
+      state.modal = !!effects.modal;
+      state.letters = !!effects.letters;
+      state.bg = !!effects.bg;
+      state.edge = !!effects.edge;
+
+      const kf = settings.kf || {};
+      state.kfDuration = Number(kf.duration ?? state.kfDuration);
+      state.kfDelay = Number(kf.delay ?? state.kfDelay);
+      state.kfInfinite = kf.infinite !== false;
+      state.kfIter = Number(kf.iterations ?? state.kfIter);
+      state.kfShimmy = Number(kf.shimmy ?? state.kfShimmy);
+      state.kfOpacity = Number(kf.opacity ?? state.kfOpacity);
+      state.clipIntensity = Number(kf.clipIntensity ?? state.clipIntensity);
+      if (kf.activeClips && typeof kf.activeClips === 'object') {
+        CLIP_KEYS.forEach(key => {
+          if (typeof kf.activeClips[key] === 'boolean') state.activeClips[key] = kf.activeClips[key];
+        });
+      }
+
+      const overlay = settings.overlay || {};
+      state.overlayDuration = Number(overlay.duration ?? state.overlayDuration);
+      state.overlayDelay = Number(overlay.delay ?? state.overlayDelay);
+      state.overlayInfinite = overlay.infinite !== false;
+      state.overlayIter = Number(overlay.iterations ?? state.overlayIter);
+      state.overlayShimmy = Number(overlay.shimmy ?? state.overlayShimmy);
+      state.overlayOpacity = Number(overlay.opacity ?? state.overlayOpacity);
+      state.overlayBlur = Number(overlay.blur ?? state.overlayBlur);
+      state.overlaySaturate = Number(overlay.saturate ?? state.overlaySaturate);
+
+      const modal = settings.modal || {};
+      state.modalDuration = Number(modal.duration ?? state.modalDuration);
+      state.modalDelay = Number(modal.delay ?? state.modalDelay);
+      state.modalInfinite = modal.infinite !== false;
+      state.modalIter = Number(modal.iterations ?? state.modalIter);
+      state.modalShimmy = Number(modal.shimmy ?? state.modalShimmy);
+      state.modalOpacity = Number(modal.opacity ?? state.modalOpacity);
+      state.modalBlur = Number(modal.blur ?? state.modalBlur);
+      state.modalSaturate = Number(modal.saturate ?? state.modalSaturate);
+
+      const letters = settings.letters || {};
+      const validPatterns = ['default', 'alternate-x', 'alternate-y', 'all-xy', 'custom'];
+      state.letterPattern = validPatterns.includes(letters.pattern) ? letters.pattern : state.letterPattern;
+      state.letterCustom = Array.isArray(letters.custom) ? [...letters.custom] : [];
+
+      const bg = settings.bg || {};
+      state.bgDuration = Number(bg.duration ?? state.bgDuration);
+      state.bgDelay = Number(bg.delay ?? state.bgDelay);
+      state.bgInfinite = !!bg.infinite;
+      state.bgIter = Number(bg.iterations ?? state.bgIter);
+      state.bgFlickerOpacity = Number(bg.flickerOpacity ?? state.bgFlickerOpacity);
+
+      const edge = settings.edge || {};
+      state.edgeDuration = Number(edge.duration ?? state.edgeDuration);
+      state.edgeDelay = Number(edge.delay ?? state.edgeDelay);
+      state.edgeInfinite = !!edge.infinite;
+      state.edgeIter = Number(edge.iterations ?? state.edgeIter);
+      state.edgeOpacity = Number(edge.opacity ?? state.edgeOpacity);
+
+      syncControlsFromState();
+      render();
+      replayAnimations();
+    }
+
+    let toastTimer;
+    function showPresetToast(message) {
+      els.presetToast.textContent = message;
+      els.presetToast.classList.add('is-visible');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => els.presetToast.classList.remove('is-visible'), 2200);
+    }
+
+    function showPresetError(message) {
+      els.presetError.hidden = false;
+      els.presetError.textContent = message;
+    }
+
+    function clearPresetError() {
+      els.presetError.hidden = true;
+      els.presetError.textContent = '';
+    }
+
+    function updatePresetCharCount() {
+      const len = els.presetPaste.value.length;
+      els.presetCharCount.textContent = `${len} character${len === 1 ? '' : 's'}`;
+    }
+
+    async function copyPresetForAI() {
+      const text = formatPresetExport(collectPresetData());
+      try {
+        await navigator.clipboard.writeText(text);
+        showPresetToast('Preset copied to clipboard');
+      } catch {
+        els.presetPaste.value = text;
+        updatePresetCharCount();
+        showPresetToast('Copy blocked — preset placed in paste field');
+      }
+    }
+
+    function applyPresetFromPaste() {
+      clearPresetError();
+      try {
+        const parsed = extractPresetJson(els.presetPaste.value);
+        applyPresetFromObject(parsed);
+        showPresetToast('Preset applied');
+      } catch (err) {
+        showPresetError(err instanceof Error ? err.message : 'Invalid preset.');
+      }
+    }
+
     function bindControls() {
       els.previewText.addEventListener('input', () => {
         state.text = els.previewText.value;
@@ -1351,18 +1791,20 @@
 
       els.replayBtn.addEventListener('click', replayAnimations);
 
-      let themeMode = 'auto';
       els.themeToggle.addEventListener('click', () => {
-        themeMode = themeMode === 'auto' ? 'dark' : themeMode === 'dark' ? 'light' : 'auto';
-        document.documentElement.removeAttribute('data-theme');
-        if (themeMode !== 'auto') document.documentElement.dataset.theme = themeMode;
-        els.themeToggle.textContent = `Theme: ${themeMode[0].toUpperCase()}${themeMode.slice(1)}`;
+        const next = state.themeMode === 'auto' ? 'dark' : state.themeMode === 'dark' ? 'light' : 'auto';
+        applyThemeMode(next);
       });
+
+      els.copyPresetBtn.addEventListener('click', copyPresetForAI);
+      els.applyPresetBtn.addEventListener('click', applyPresetFromPaste);
+      els.presetPaste.addEventListener('input', updatePresetCharCount);
     }
 
     initClipToggles();
     bindControls();
     updateLetterGrid(state.text);
+    updatePresetCharCount();
     render();
   </script>
 </body>
