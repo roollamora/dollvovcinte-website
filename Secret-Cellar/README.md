@@ -44,3 +44,6 @@ To share:
 - App lives in `Secret-Cellar/` (not excluded by `.vercelignore`)
 - Auth function: `api/auth.js`
 - Does not modify root `index.html` or `glitch-test.html`
+- Health automation: `scripts/check-secret-cellar.sh` + `.github/workflows/secret-cellar-health.yml`
+- If GitHub Action **Deploy dollvovcinte.com** fails with invalid token: refresh repo secret `VERCEL_TOKEN` in GitHub → Settings → Secrets. Vercel’s Git integration may still deploy on push.
+- Requirements / model plan: `REQUIREMENTS.md`, `AGENT_PLAN.md` (excluded from Vercel by `*.md` ignore)

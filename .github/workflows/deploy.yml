@@ -29,12 +29,15 @@ jobs:
           test -f position-calculator.js
           test -f responsive-manager.js
           test -f Secret-Cellar/index.html
+          test -f Secret-Cellar/js/app.js
+          test -f Secret-Cellar/js/auth.js
           test -f api/auth.js
+          test -f vercel.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
