@@ -11,15 +11,34 @@ Private Notion-like workspace for DVCT at `/Secret-Cellar`.
 
 Login is required before any content is shown.
 
-- **Production (recommended):** Vercel serverless route `POST/GET /api/auth`
-  - Env vars in the Vercel project:
-    - `CELLAR_USER` — username (default `admin`)
-    - `CELLAR_PASS` — password (default `change-me`)
+- **Production:** Vercel serverless route `POST/GET /api/auth`
+  - Required env vars in the Vercel project:
+    - `CELLAR_USER` — username
+    - `CELLAR_PASS` — password
     - `CELLAR_SECRET` — optional HMAC secret for session tokens (defaults to `CELLAR_PASS`)
-  - Successful login returns a signed token stored in `sessionStorage` (tab session).
-- **Local / API unavailable:** falls back to demo credentials `admin` / `change-me` only when `/api/auth` cannot be reached.
+  - Successful login returns a signed, expiring token stored in `sessionStorage` (tab session).
+  - **A deployed instance with `CELLAR_USER` or `CELLAR_PASS` unset refuses every login
+    with HTTP 503.** There is no default credential in production — set the env vars before use.
+- **Local development:** when `/api/auth` is unreachable *and* the page is served from
+  `localhost` / `127.0.0.1` / `file:`, the app accepts demo credentials `admin` / `change-me`.
+  This fallback cannot trigger on the production origin.
 
-**Warning:** Change the default password before real use. Do not commit production secrets.
+**Known limitation:** the gate is client-side. `Secret-Cellar/*` assets are publicly
+fetchable, so the page shell is not secret. No user content is exposed by this, because
+every workspace lives only in the visitor's own `localStorage` and is never uploaded.
+Server-enforced gating is post-MVP.
+
+## Local development
+
+Asset paths are root-absolute (`/Secret-Cellar/...`) so that they resolve on Vercel, where
+`trailingSlash: false` means the page is served at `/Secret-Cellar` with no trailing slash.
+Because of that, opening `index.html` directly from disk will not load styles or scripts.
+Serve the repository root instead:
+
+```
+python3 -m http.server 8000
+# then open http://localhost:8000/Secret-Cellar/
+```
 
 ## Sharing
 

@@ -2,9 +2,12 @@
  * Secret-Cellar auth — Vercel serverless function
  *
  * Env vars (set in Vercel project settings):
- *   CELLAR_USER   — username (default: admin)
- *   CELLAR_PASS   — password (default: change-me)  ← change in production!
+ *   CELLAR_USER   — username (required in any deployed environment)
+ *   CELLAR_PASS   — password (required in any deployed environment)
  *   CELLAR_SECRET — HMAC secret for session tokens (defaults to CELLAR_PASS)
+ *
+ * A deployed instance without CELLAR_USER / CELLAR_PASS refuses every request rather
+ * than falling back to well-known defaults. The defaults exist for local runs only.
  *
  * POST { username, password } → { ok, token, username }
  * GET  ?token=...            → { ok, username }
@@ -12,6 +15,9 @@
  */
 
 const crypto = require('crypto');
+
+const DEPLOYED = Boolean(process.env.VERCEL);
+const CONFIGURED = Boolean(process.env.CELLAR_USER && process.env.CELLAR_PASS);
 
 const USER = process.env.CELLAR_USER || 'admin';
 const PASS = process.env.CELLAR_PASS || 'change-me';
@@ -77,6 +83,14 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
     res.end();
+    return;
+  }
+
+  if (DEPLOYED && !CONFIGURED) {
+    json(res, 503, {
+      ok: false,
+      error: 'Auth not configured — set CELLAR_USER and CELLAR_PASS',
+    });
     return;
   }
 

@@ -29,6 +29,10 @@ jobs:
           test -f position-calculator.js
           test -f responsive-manager.js
           test -f Secret-Cellar/index.html
+          test -f Secret-Cellar/styles.css
+          test -f Secret-Cellar/js/app.js
+          test -f Secret-Cellar/js/auth.js
+          test -f Secret-Cellar/js/storage.js
           test -f api/auth.js
 
       - name: Setup Node.js

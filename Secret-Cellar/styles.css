@@ -593,6 +593,76 @@ a {
   font-family: var(--font-mono);
 }
 
+.dictate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.dictate-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--ink);
+}
+
+.dictate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dictate-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.dictate-btn.recording {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.dictate-btn.recording .dictate-dot {
+  background: var(--danger);
+  animation: dictate-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dictate-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dictate-btn.recording .dictate-dot {
+    animation: none;
+  }
+}
+
+.dictate-interim {
+  padding: 2px 8px 6px;
+  min-height: 1.2em;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+}
+
 .block-actions {
   position: absolute;
   right: 0;

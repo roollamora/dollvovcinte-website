@@ -123,6 +123,7 @@ async function handleLogin(e) {
 }
 
 async function handleLogout() {
+  stopDictation();
   await logout();
   session = null;
   showLogin();
@@ -220,6 +221,7 @@ function autosize(el) {
 }
 
 function renderBlocks(doc) {
+  stopDictation();
   const root = $('#blocks');
   root.innerHTML = '';
   let numbered = 0;
@@ -266,20 +268,6 @@ function renderBlocks(doc) {
     if (block.type === 'divider') {
       body.innerHTML = '<div class="divider-line"></div>';
     } else {
-      if (block.type === 'transcript') {
-        const meta = document.createElement('div');
-        meta.className = 'block-meta-row';
-        const ts = document.createElement('input');
-        ts.type = 'datetime-local';
-        ts.value = block.timestamp || '';
-        ts.addEventListener('change', () => {
-          block.timestamp = ts.value;
-          touch(doc);
-        });
-        meta.appendChild(document.createTextNode('Timestamp '));
-        meta.appendChild(ts);
-        body.appendChild(meta);
-      }
       const ta = document.createElement('textarea');
       ta.className = 'block-content';
       ta.rows = 1;
@@ -298,7 +286,56 @@ function renderBlocks(doc) {
         renderSidebarTitlesSoft();
       });
       ta.addEventListener('keydown', (e) => onBlockKey(e, doc, block, index, ta));
+
+      let interimEl = null;
+      if (block.type === 'transcript') {
+        const meta = document.createElement('div');
+        meta.className = 'block-meta-row';
+        const ts = document.createElement('input');
+        ts.type = 'datetime-local';
+        ts.value = block.timestamp || '';
+        ts.addEventListener('change', () => {
+          block.timestamp = ts.value;
+          touch(doc);
+        });
+        meta.appendChild(document.createTextNode('Timestamp '));
+        meta.appendChild(ts);
+
+        const dictateBtn = document.createElement('button');
+        dictateBtn.type = 'button';
+        dictateBtn.className = 'dictate-btn';
+        const dot = document.createElement('span');
+        dot.className = 'dictate-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.className = 'dictate-label';
+        label.textContent = 'Dictate';
+        dictateBtn.appendChild(dot);
+        dictateBtn.appendChild(label);
+
+        interimEl = document.createElement('div');
+        interimEl.className = 'dictate-interim';
+
+        if (!SpeechRecognitionCtor) {
+          dictateBtn.disabled = true;
+          dictateBtn.title = 'Dictation is not supported in this browser';
+        } else {
+          dictateBtn.title = 'Start dictation';
+          dictateBtn.addEventListener('click', () => {
+            if (activeDictation && activeDictation.blockId === block.id) {
+              stopDictation();
+            } else {
+              startDictation(doc, block, ta, dictateBtn, interimEl);
+            }
+          });
+        }
+
+        meta.appendChild(dictateBtn);
+        body.appendChild(meta);
+      }
+
       body.appendChild(ta);
+      if (interimEl) body.appendChild(interimEl);
       requestAnimationFrame(() => autosize(ta));
     }
 
@@ -415,7 +452,163 @@ function addBlock(type) {
   if (type !== 'divider') focusBlock(block.id);
 }
 
+/* ——— Dictation ——— */
+
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+let activeDictation = null; // { recognition, blockId, btn, interimEl, manualStop, failCount, startedAt, restartTimer }
+
+function setDictateButtonState(btn, active) {
+  btn.classList.toggle('recording', active);
+  const label = btn.querySelector('.dictate-label');
+  if (label) label.textContent = active ? 'Stop' : 'Dictate';
+  btn.title = active ? 'Stop dictation' : 'Start dictation';
+}
+
+function stopDictation() {
+  if (!activeDictation) return;
+  const state = activeDictation;
+  activeDictation = null;
+  state.manualStop = true;
+  clearTimeout(state.restartTimer);
+  try {
+    state.recognition.stop();
+  } catch {
+    // already stopped
+  }
+  setDictateButtonState(state.btn, false);
+  state.interimEl.textContent = '';
+}
+
+function startDictation(doc, block, ta, btn, interimEl) {
+  if (!SpeechRecognitionCtor) return;
+  stopDictation(); // only one session may be active at a time
+
+  const recognition = new SpeechRecognitionCtor();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = document.documentElement.lang || navigator.language;
+
+  const state = {
+    recognition,
+    blockId: block.id,
+    btn,
+    interimEl,
+    manualStop: false,
+    failCount: 0,
+    startedAt: 0,
+    restartTimer: null,
+  };
+
+  recognition.onstart = () => {
+    state.startedAt = Date.now();
+  };
+
+  recognition.onresult = (e) => {
+    let finalChunk = '';
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const result = e.results[i];
+      if (result.isFinal) finalChunk += result[0].transcript;
+      else interim += result[0].transcript;
+    }
+    if (finalChunk.trim()) {
+      const sep = block.text && !/\s$/.test(block.text) ? ' ' : '';
+      block.text = (block.text || '') + sep + finalChunk.trim();
+      ta.value = block.text;
+      touch(doc);
+      autosize(ta);
+      interimEl.textContent = '';
+    } else {
+      interimEl.textContent = interim;
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      toast('Microphone access denied — allow it in your browser to dictate');
+    } else if (e.error === 'no-speech' || e.error === 'aborted') {
+      // benign, no toast
+    } else {
+      toast('Dictation error: ' + e.error);
+    }
+  };
+
+  recognition.onend = () => {
+    if (activeDictation !== state) return; // superseded or already cleaned up
+    if (state.manualStop) {
+      activeDictation = null;
+      return;
+    }
+    // Chrome's continuous mode often ends spontaneously; restart to keep
+    // long dictation from being silently cut off. If it dies almost
+    // instantly and repeatedly, give up instead of looping forever.
+    const survivedAWhile = Date.now() - state.startedAt > 1500;
+    state.failCount = survivedAWhile ? 0 : state.failCount + 1;
+    if (state.failCount >= 5) {
+      toast('Dictation stopped after repeated errors');
+      activeDictation = null;
+      setDictateButtonState(state.btn, false);
+      state.interimEl.textContent = '';
+      return;
+    }
+    state.restartTimer = setTimeout(() => {
+      if (activeDictation !== state) return;
+      try {
+        recognition.start();
+      } catch {
+        activeDictation = null;
+        setDictateButtonState(state.btn, false);
+      }
+    }, 300);
+  };
+
+  try {
+    recognition.start();
+  } catch {
+    toast('Could not start dictation');
+    return;
+  }
+  activeDictation = state;
+  setDictateButtonState(btn, true);
+}
+
 /* ——— Mood board ——— */
+
+// Mood items may come from an imported file or a #share= link, so their
+// values are untrusted and must never reach style/src unvalidated.
+
+const SAFE_COLOR_RE = new RegExp(
+  '^(' +
+    '#[0-9a-f]{3}|#[0-9a-f]{6}|#[0-9a-f]{8}|' +
+    'rgba?\\([^()]*\\)|' +
+    'hsla?\\([^()]*\\)|' +
+    '[a-z]+' +
+  ')$',
+  'i'
+);
+
+function isSafeColorValue(value) {
+  return typeof value === 'string' && SAFE_COLOR_RE.test(value.trim());
+}
+
+function isSafeImageURL(value) {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'http:' || url.protocol === 'https:') return true;
+    return url.protocol === 'data:' && /^data:image\//i.test(value);
+  } catch {
+    return false;
+  }
+}
+
+function moodImagePlaceholder() {
+  return Object.assign(document.createElement('div'), {
+    className: 'mood-text',
+    textContent: 'Image failed to load',
+  });
+}
 
 function renderMood(doc) {
   const section = $('#mood-section');
@@ -443,21 +636,20 @@ function renderMood(doc) {
     });
 
     if (item.kind === 'image') {
-      const img = document.createElement('img');
-      img.src = item.value;
-      img.alt = '';
-      img.referrerPolicy = 'no-referrer';
-      img.onerror = () => {
-        img.replaceWith(Object.assign(document.createElement('div'), {
-          className: 'mood-text',
-          textContent: 'Image failed to load',
-        }));
-      };
-      card.appendChild(img);
+      if (!isSafeImageURL(item.value)) {
+        card.appendChild(moodImagePlaceholder());
+      } else {
+        const img = document.createElement('img');
+        img.src = item.value;
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = () => img.replaceWith(moodImagePlaceholder());
+        card.appendChild(img);
+      }
     } else if (item.kind === 'color') {
       const sw = document.createElement('div');
       sw.className = 'mood-swatch';
-      sw.style.background = item.value;
+      sw.style.background = isSafeColorValue(item.value) ? item.value : 'var(--line)';
       const label = document.createElement('span');
       label.textContent = item.value;
       sw.appendChild(label);

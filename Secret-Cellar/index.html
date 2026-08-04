@@ -8,13 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/Secret-Cellar/styles.css">
 </head>
 <body>
   <!--
     Secret Cellar — private collaborative docs for DVCT
-    Setup: set Vercel env CELLAR_USER / CELLAR_PASS / CELLAR_SECRET
-    Defaults for first login: admin / change-me  (change immediately in production)
+    Setup: set Vercel env CELLAR_USER / CELLAR_PASS / CELLAR_SECRET.
+    Without those vars a deployed instance refuses all logins. See Secret-Cellar/README.md.
   -->
 
   <div id="login-screen" class="login-screen">
@@ -32,9 +32,7 @@
       <button id="login-btn" class="btn btn-primary" type="submit">Enter cellar</button>
       <div id="login-error" class="login-error hidden" role="alert"></div>
       <p class="login-hint">
-        Login required. Production credentials come from Vercel env vars
-        <code>CELLAR_USER</code> / <code>CELLAR_PASS</code>.
-        Demo default: <code>admin</code> / <code>change-me</code> — change these before real use.
+        Login required. Access is restricted.
       </p>
     </form>
   </div>
@@ -134,6 +132,6 @@
 
   <div id="toast" class="toast" role="status"></div>
 
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="/Secret-Cellar/js/app.js"></script>
 </body>
 </html>
