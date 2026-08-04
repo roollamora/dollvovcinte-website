@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Secret Cellar — dollvovcinte</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=IBM+Plex+Mono:wght@400;500&family=Karla:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!--
+    Secret Cellar — private collaborative docs for DVCT
+    Setup: set Vercel env CELLAR_USER / CELLAR_PASS / CELLAR_SECRET
+    Defaults for first login: admin / change-me  (change immediately in production)
+  -->
+
+  <div id="login-screen" class="login-screen">
+    <form id="login-form" class="login-card" autocomplete="on">
+      <h1 class="login-brand">Secret Cellar</h1>
+      <p class="login-sub">Private workspace for notes, reports, and mood boards.</p>
+      <div class="field">
+        <label for="login-user">Username</label>
+        <input id="login-user" name="username" type="text" required autocomplete="username" autofocus>
+      </div>
+      <div class="field">
+        <label for="login-pass">Password</label>
+        <input id="login-pass" name="password" type="password" required autocomplete="current-password">
+      </div>
+      <button id="login-btn" class="btn btn-primary" type="submit">Enter cellar</button>
+      <div id="login-error" class="login-error hidden" role="alert"></div>
+      <p class="login-hint">
+        Login required. Production credentials come from Vercel env vars
+        <code>CELLAR_USER</code> / <code>CELLAR_PASS</code>.
+        Demo default: <code>admin</code> / <code>change-me</code> — change these before real use.
+      </p>
+    </form>
+  </div>
+
+  <button id="menu-btn" class="menu-btn" type="button" aria-label="Open menu" hidden>☰</button>
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+  <div id="app" class="app hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-brand">Secret Cellar</div>
+        <div id="sidebar-user" class="sidebar-user"></div>
+      </div>
+      <div class="sidebar-actions">
+        <button type="button" class="btn btn-ghost" id="btn-new-page">+ Page</button>
+        <button type="button" class="btn btn-ghost" id="btn-new-transcript">+ Notes</button>
+        <button type="button" class="btn btn-ghost" id="btn-new-report">+ Report</button>
+        <button type="button" class="btn btn-ghost" id="btn-new-mood">+ Mood</button>
+      </div>
+      <ul id="doc-list" class="doc-list"></ul>
+      <div class="sidebar-foot">
+        <button type="button" class="btn btn-ghost" id="btn-export">Export JSON</button>
+        <button type="button" class="btn btn-ghost" id="btn-import">Import JSON</button>
+        <input id="import-file" type="file" accept="application/json,.json" class="hidden">
+        <button type="button" class="btn btn-ghost" id="btn-share">Copy share link</button>
+        <p class="share-note">
+          Shared between users via Export / Import or share link.
+          Live multi-user sync needs a backend later. Data is stored in this browser’s localStorage.
+        </p>
+        <button type="button" class="btn btn-ghost btn-danger" id="btn-logout">Log out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button type="button" class="tool-btn" data-set-mode="page">Page</button>
+          <button type="button" class="tool-btn" data-set-mode="transcript">Transcribe</button>
+          <button type="button" class="tool-btn" data-set-mode="report">Report</button>
+          <button type="button" class="tool-btn" data-set-mode="mood">Mood</button>
+        </div>
+        <span id="mode-badge" class="mode-badge">Page</span>
+      </div>
+
+      <div class="editor-scroll">
+        <div id="empty-state" class="empty-state hidden">
+          <h2>No pages yet</h2>
+          <p>Create a page, transcription, report, or mood board to begin.</p>
+          <button type="button" class="btn btn-primary" id="empty-create" style="width:auto;margin:0 auto">Create page</button>
+        </div>
+
+        <div id="editor-wrap" class="editor-wrap">
+          <textarea id="doc-title" class="doc-title-input" rows="1" placeholder="Untitled"></textarea>
+          <div id="report-meta" class="doc-meta">
+            <label>
+              Status
+              <select id="doc-status">
+                <option value="draft">Draft</option>
+                <option value="in-progress">In progress</option>
+                <option value="review">Review</option>
+                <option value="final">Final</option>
+              </select>
+            </label>
+            <label>
+              Date
+              <input id="doc-date" type="date">
+            </label>
+          </div>
+
+          <div id="blocks" class="blocks"></div>
+          <div id="add-block-bar" class="add-block-bar" aria-label="Add block"></div>
+
+          <section id="mood-section" class="hidden">
+            <div id="mood-board" class="mood-board"></div>
+            <div class="mood-add-row">
+              <div class="field">
+                <label for="mood-image-url">Image URL</label>
+                <input id="mood-image-url" type="url" placeholder="https://…">
+              </div>
+              <button type="button" class="btn btn-ghost" id="btn-mood-image" style="border:1px solid var(--line);background:#fff">Add image</button>
+              <div class="field" style="flex:0">
+                <label for="mood-color">Color</label>
+                <input id="mood-color" type="color" value="#2f5d50">
+              </div>
+              <button type="button" class="btn btn-ghost" id="btn-mood-color" style="border:1px solid var(--line);background:#fff">Add swatch</button>
+              <div class="field">
+                <label for="mood-text-input">Text card</label>
+                <input id="mood-text-input" type="text" placeholder="Short note">
+              </div>
+              <button type="button" class="btn btn-ghost" id="btn-mood-text" style="border:1px solid var(--line);background:#fff">Add text</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
