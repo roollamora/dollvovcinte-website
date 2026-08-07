@@ -1,5 +1,24 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/Secret-Cellar", "destination": "/Secret-Cellar/index.html" },
+    { "source": "/Secret-Cellar/", "destination": "/Secret-Cellar/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/Secret-Cellar/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Cache-Control", "value": "private, no-store" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    }
+  ]
 }

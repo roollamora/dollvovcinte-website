@@ -1,15 +1,14 @@
 /**
  * Auth client for Secret-Cellar
- * Talks to /api/auth. Real credentials live in the CELLAR_USER / CELLAR_PASS env vars.
- *
- * The demo fallback below exists so the app can be driven without a serverless runtime
- * during local development. It is gated on a local origin, so a network failure on the
- * production domain can never grant access.
+ * Talks to /api/auth. Local fallback only on localhost / file origins.
  */
 
 const SESSION_KEY = 'secret-cellar-session';
-const DEMO_USER = 'admin';
-const DEMO_PASS = 'change-me';
+
+const LOCAL_ACCOUNTS = {
+  'Boss-Girl': '12345678',
+  R: 'heya!',
+};
 
 function isLocalOrigin() {
   return (
@@ -37,8 +36,21 @@ function saveSession(session) {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
-// Statuses a plain static file server returns when no serverless runtime is present.
 const NO_API_STATUS = new Set([404, 405, 501, 502]);
+
+function demoLogin(username, password) {
+  if (LOCAL_ACCOUNTS[username] !== password) {
+    throw new Error('Invalid username or password');
+  }
+  const session = {
+    token: 'demo-local-' + Date.now(),
+    username,
+    mode: 'demo',
+    at: Date.now(),
+  };
+  saveSession(session);
+  return session;
+}
 
 export async function login(username, password) {
   try {
@@ -63,7 +75,6 @@ export async function login(username, password) {
     saveSession(session);
     return session;
   } catch (err) {
-    // Network / missing API (local open without serverless)
     const unreachable =
       err instanceof TypeError || String(err.message).includes('Failed to fetch');
     if (unreachable && isLocalOrigin()) {
@@ -73,26 +84,11 @@ export async function login(username, password) {
   }
 }
 
-function demoLogin(username, password) {
-  if (username !== DEMO_USER || password !== DEMO_PASS) {
-    throw new Error('Invalid username or password (local demo: admin / change-me)');
-  }
-  const session = {
-    token: 'demo-local-' + Date.now(),
-    username: DEMO_USER,
-    mode: 'demo',
-    at: Date.now(),
-  };
-  saveSession(session);
-  return session;
-}
-
 export async function verifySession() {
   const session = getSession();
   if (!session) return null;
 
   if (session.mode === 'demo') {
-    // Local/demo sessions last for the tab lifetime only
     return session;
   }
 
@@ -105,7 +101,6 @@ export async function verifySession() {
     }
     return session;
   } catch {
-    // Offline: keep existing session for this tab
     return session;
   }
 }

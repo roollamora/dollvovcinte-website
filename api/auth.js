@@ -1,28 +1,59 @@
 /**
- * Secret-Cellar auth — Vercel serverless function
+ * Secret-Cellar auth — Vercel serverless function (multi-account)
  *
- * Env vars (set in Vercel project settings):
- *   CELLAR_USER   — username (required in any deployed environment)
- *   CELLAR_PASS   — password (required in any deployed environment)
- *   CELLAR_SECRET — HMAC secret for session tokens (defaults to CELLAR_PASS)
+ * Env vars (optional overrides in Vercel):
+ *   CELLAR_USERS  — JSON map, e.g. {"Boss-Girl":"12345678","R":"heya!"}
+ *   CELLAR_USER   — extra single username (merged in with CELLAR_PASS)
+ *   CELLAR_PASS   — password for CELLAR_USER
+ *   CELLAR_SECRET — HMAC secret for session tokens
  *
- * A deployed instance without CELLAR_USER / CELLAR_PASS refuses every request rather
- * than falling back to well-known defaults. The defaults exist for local runs only.
+ * Built-in accounts are always available unless you replace them via CELLAR_USERS
+ * (CELLAR_USERS merges on top of defaults; set empty overrides only by redefining keys).
  *
  * POST { username, password } → { ok, token, username }
  * GET  ?token=...            → { ok, username }
- * DELETE / body { token }    → { ok }  (client clears session; token is self-expiring)
+ * DELETE                     → { ok }
  */
 
 const crypto = require('crypto');
 
-const DEPLOYED = Boolean(process.env.VERCEL);
-const CONFIGURED = Boolean(process.env.CELLAR_USER && process.env.CELLAR_PASS);
+const DEFAULT_ACCOUNTS = {
+  'Boss-Girl': '12345678',
+  R: 'heya!',
+};
 
-const USER = process.env.CELLAR_USER || 'admin';
-const PASS = process.env.CELLAR_PASS || 'change-me';
-const SECRET = process.env.CELLAR_SECRET || PASS;
-const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+function loadAccounts() {
+  const accounts = { ...DEFAULT_ACCOUNTS };
+
+  const raw = process.env.CELLAR_USERS;
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        for (const [user, pass] of Object.entries(parsed)) {
+          if (user && pass != null) accounts[String(user)] = String(pass);
+        }
+      }
+    } catch {
+      /* keep defaults if JSON is invalid */
+    }
+  }
+
+  const singleUser = process.env.CELLAR_USER;
+  const singlePass = process.env.CELLAR_PASS;
+  if (singleUser && singlePass) {
+    accounts[String(singleUser)] = String(singlePass);
+  }
+
+  return accounts;
+}
+
+const ACCOUNTS = loadAccounts();
+const SECRET =
+  process.env.CELLAR_SECRET ||
+  process.env.CELLAR_PASS ||
+  'secret-cellar-hmac';
+const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -57,8 +88,20 @@ function makeToken(username) {
 function safeEqual(a, b) {
   const ba = Buffer.from(String(a));
   const bb = Buffer.from(String(b));
-  if (ba.length !== bb.length) return false;
+  if (ba.length !== bb.length) {
+    crypto.timingSafeEqual(ba, ba);
+    return false;
+  }
   return crypto.timingSafeEqual(ba, bb);
+}
+
+function authenticate(username, password) {
+  const expected = ACCOUNTS[username];
+  if (expected == null) {
+    safeEqual(password, '________________');
+    return false;
+  }
+  return safeEqual(password, expected);
 }
 
 function verifyToken(token) {
@@ -69,10 +112,10 @@ function verifyToken(token) {
     const [username, expStr, sig] = parts;
     const exp = Number(expStr);
     if (!username || !Number.isFinite(exp) || Date.now() > exp) return null;
+    if (!(username in ACCOUNTS)) return null;
     const payload = `${username}:${exp}`;
     const expected = crypto.createHmac('sha256', SECRET).update(payload).digest('hex');
     if (!safeEqual(sig, expected)) return null;
-    if (!safeEqual(username, USER)) return null;
     return username;
   } catch {
     return null;
@@ -83,14 +126,6 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
     res.end();
-    return;
-  }
-
-  if (DEPLOYED && !CONFIGURED) {
-    json(res, 503, {
-      ok: false,
-      error: 'Auth not configured — set CELLAR_USER and CELLAR_PASS',
-    });
     return;
   }
 
@@ -118,15 +153,13 @@ module.exports = async function handler(req, res) {
     const username = String(body.username || '');
     const password = String(body.password || '');
 
-    if (!safeEqual(username, USER) || !safeEqual(password, PASS)) {
-      // Constant-ish delay against timing probes
+    if (!authenticate(username, password)) {
       await new Promise((r) => setTimeout(r, 200 + Math.random() * 200));
       json(res, 401, { ok: false, error: 'Invalid username or password' });
       return;
     }
 
-    const token = makeToken(username);
-    json(res, 200, { ok: true, token, username });
+    json(res, 200, { ok: true, token: makeToken(username), username });
     return;
   }
 
