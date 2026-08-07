@@ -1,15 +1,15 @@
 /**
  * Auth client for Secret-Cellar
- * Talks to /api/auth; falls back to demo defaults only when API is unreachable.
- *
- * Demo defaults (CHANGE IN PRODUCTION via CELLAR_USER / CELLAR_PASS):
- *   username: admin
- *   password: change-me
+ * Talks to /api/auth; falls back to local accounts only when API is unreachable.
  */
 
 const SESSION_KEY = 'secret-cellar-session';
-const DEMO_USER = 'admin';
-const DEMO_PASS = 'change-me';
+
+/** Local fallback accounts (same as api/auth.js defaults). */
+const LOCAL_ACCOUNTS = {
+  'Boss-Girl': '12345678',
+  R: 'heya!',
+};
 
 export function getSession() {
   try {
@@ -50,17 +50,17 @@ export async function login(username, password) {
   } catch (err) {
     // Network / missing API (local open without serverless)
     if (err instanceof TypeError || String(err.message).includes('Failed to fetch')) {
-      if (username === DEMO_USER && password === DEMO_PASS) {
+      if (LOCAL_ACCOUNTS[username] === password) {
         const session = {
           token: 'demo-local-' + Date.now(),
-          username: DEMO_USER,
+          username,
           mode: 'demo',
           at: Date.now(),
         };
         saveSession(session);
         return session;
       }
-      throw new Error('Invalid username or password (demo: admin / change-me)');
+      throw new Error('Invalid username or password');
     }
     throw err;
   }
@@ -71,7 +71,6 @@ export async function verifySession() {
   if (!session) return null;
 
   if (session.mode === 'demo') {
-    // Local/demo sessions last for the tab lifetime only
     return session;
   }
 
@@ -84,7 +83,6 @@ export async function verifySession() {
     }
     return session;
   } catch {
-    // Offline: keep existing session for this tab
     return session;
   }
 }

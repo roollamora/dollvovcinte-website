@@ -11,15 +11,16 @@ Private Notion-like workspace for DVCT at `/Secret-Cellar`.
 
 Login is required before any content is shown.
 
-- **Production (recommended):** Vercel serverless route `POST/GET /api/auth`
-  - Env vars in the Vercel project:
-    - `CELLAR_USER` — username (default `admin`)
-    - `CELLAR_PASS` — password (default `change-me`)
-    - `CELLAR_SECRET` — optional HMAC secret for session tokens (defaults to `CELLAR_PASS`)
+- **Production:** Vercel serverless route `POST/GET /api/auth`
+  - Built-in accounts (also overridable via env):
+    - `Boss-Girl` / `12345678`
+    - `R` / `heya!`
+  - Env vars (optional overrides):
+    - `CELLAR_USERS` — JSON map, e.g. `{"Boss-Girl":"12345678","R":"heya!"}`
+    - `CELLAR_USER` / `CELLAR_PASS` — extra single account merged into the map
+    - `CELLAR_SECRET` — HMAC secret for session tokens
   - Successful login returns a signed token stored in `sessionStorage` (tab session).
-- **Local / API unavailable:** falls back to demo credentials `admin` / `change-me` only when `/api/auth` cannot be reached.
-
-**Warning:** Change the default password before real use. Do not commit production secrets.
+- **Local / API unavailable:** same built-in accounts as fallback.
 
 ## Sharing
 

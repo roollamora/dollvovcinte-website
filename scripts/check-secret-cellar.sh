@@ -10,11 +10,15 @@ test "$code" = "200" || { echo "FAIL: Secret-Cellar HTTP $code"; exit 1; }
 echo "OK HTML $code"
 
 echo "== Auth API =="
-resp=$(curl -s -X POST "$BASE/api/auth" \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"change-me"}')
-echo "$resp" | grep -q '"ok":true' || { echo "FAIL: auth $resp"; exit 1; }
-echo "OK auth (demo credentials — rotate CELLAR_PASS in Vercel)"
+for pair in 'Boss-Girl:12345678' 'R:heya!'; do
+  user="${pair%%:*}"
+  pass="${pair#*:}"
+  resp=$(curl -s -X POST "$BASE/api/auth" \
+    -H 'Content-Type: application/json' \
+    -d "{\"username\":\"$user\",\"password\":\"$pass\"}")
+  echo "$resp" | grep -q '"ok":true' || { echo "FAIL: auth $user → $resp"; exit 1; }
+  echo "OK auth $user"
+done
 
 echo "== Homepage still up =="
 code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/")
